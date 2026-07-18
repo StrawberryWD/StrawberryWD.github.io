@@ -133,8 +133,124 @@
   .sidebar {
     border-right: 1px solid var(--border);
     display: flex; flex-direction: column;
-    overflow-y: auto;
+    overflow: hidden;
     height: calc(100vh - 65px);
+  }
+
+  /* ── Conversation list section (top of sidebar) ── */
+  .conv-section {
+    display: flex;
+    flex-direction: column;
+    border-bottom: 1px solid var(--border);
+    flex: 0 0 auto;
+    max-height: 45%;
+  }
+
+  .conv-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px 8px;
+  }
+  .conv-header-title {
+    font-size: .72rem; font-weight: 600; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--muted);
+  }
+  .new-conv-btn {
+    display: flex; align-items: center; gap: 5px;
+    padding: 5px 10px; border-radius: var(--radius-sm);
+    border: 1px solid var(--border); background: var(--surface);
+    color: var(--accent); font-size: .75rem; font-weight: 600;
+    cursor: pointer; transition: all .2s;
+    font-family: inherit;
+  }
+  .new-conv-btn:hover { background: var(--accent); color: white; border-color: var(--accent); }
+
+  .conv-list {
+    overflow-y: auto;
+    padding: 4px 10px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .conv-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background .15s;
+    min-width: 0;
+  }
+  .conv-item:hover { background: var(--panel); }
+  .conv-item.active {
+    background: rgba(91,108,255,.1);
+    outline: 1px solid rgba(91,108,255,.2);
+  }
+
+  .conv-icon {
+    font-size: .9rem;
+    flex-shrink: 0;
+    opacity: .6;
+  }
+
+  .conv-name {
+    flex: 1;
+    font-size: .82rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--text);
+  }
+  .conv-item.active .conv-name { color: var(--accent); font-weight: 600; }
+
+  .conv-name-input {
+    flex: 1;
+    font-size: .82rem;
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    padding: 2px 6px;
+    outline: none;
+    background: var(--surface);
+    color: var(--text);
+    font-family: inherit;
+    min-width: 0;
+  }
+
+  .conv-actions {
+    display: flex;
+    gap: 2px;
+    flex-shrink: 0;
+    opacity: 0;
+    transition: opacity .15s;
+  }
+  .conv-item:hover .conv-actions,
+  .conv-item.active .conv-actions { opacity: 1; }
+
+  .conv-action-btn {
+    display: flex; align-items: center; justify-content: center;
+    width: 22px; height: 22px;
+    border: none; background: none;
+    cursor: pointer; border-radius: 4px;
+    font-size: .8rem; color: var(--muted);
+    transition: background .15s, color .15s;
+  }
+  .conv-action-btn:hover { background: var(--border); color: var(--text); }
+  .conv-action-btn.del:hover { background: rgba(220,38,38,.12); color: var(--red); }
+
+  .conv-empty {
+    padding: 12px 20px;
+    font-size: .8rem;
+    color: var(--muted);
+    text-align: center;
+  }
+
+  /* ── Settings section (bottom of sidebar) ── */
+  .settings-section {
+    overflow-y: auto;
+    flex: 1;
   }
 
   .section { padding: 18px 20px; border-bottom: 1px solid var(--border); }
@@ -180,6 +296,7 @@
     padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-sm);
     background: var(--surface); color: var(--muted); font-size: .82rem;
     cursor: pointer; transition: all .2s;
+    font-family: inherit;
   }
   .clear-btn:hover { border-color: var(--red); color: var(--red); }
 
@@ -306,7 +423,8 @@
 
   @media (max-width: 800px) {
     .workspace { grid-template-columns: 1fr; }
-    .sidebar { height: auto; max-height: 40vh; }
+    .sidebar { height: auto; max-height: 50vh; }
+    .conv-section { max-height: 50%; }
     .chat-pane { height: auto; }
     .msg { max-width: 90%; }
   }
@@ -341,35 +459,49 @@
   <!-- ── Sidebar ── -->
   <aside class="sidebar">
 
-    <div class="section">
-      <div class="section-title">模型</div>
-      <select id="chat-model">
-        <option value="agnes-2.0-flash">agnes-2.0-flash</option>
-      </select>
-      <div class="hint">
-        由 Agnes 2.0 Flash 驱动，一个第三方模型，与 Anthropic 或 Claude 无关。
-        API Key 只保存在你当前的浏览器标签页内，不会被写入本站或上传到任何地方。
+    <!-- 对话列表 -->
+    <div class="conv-section">
+      <div class="conv-header">
+        <div class="conv-header-title">历史对话</div>
+        <button class="new-conv-btn" onclick="newConversation()">＋ 新建</button>
+      </div>
+      <div class="conv-list" id="conv-list">
+        <div class="conv-empty">暂无对话记录</div>
       </div>
     </div>
 
-    <div class="section">
-      <div class="section-title">系统提示词</div>
-      <label>可选，用来设定对话的角色或风格</label>
-      <textarea id="system-prompt" placeholder="例如：你是一个简洁、友善的中文助手。"></textarea>
-    </div>
-
-    <div class="section">
-      <div class="section-title">生成参数</div>
-      <label>Temperature</label>
-      <div class="slider-row">
-        <input type="range" id="temperature" min="0" max="1.5" step="0.1" value="0.7"
-          oninput="document.getElementById('temp-val').textContent = this.value">
-        <span class="slider-val" id="temp-val">0.7</span>
+    <!-- 设置项 -->
+    <div class="settings-section">
+      <div class="section">
+        <div class="section-title">模型</div>
+        <select id="chat-model">
+          <option value="agnes-2.0-flash">agnes-2.0-flash</option>
+        </select>
+        <div class="hint">
+          由 Agnes 2.0 Flash 驱动，一个第三方模型，与 Anthropic 或 Claude 无关。
+          API Key 只保存在你当前的浏览器标签页内，不会被写入本站或上传到任何地方。
+        </div>
       </div>
-    </div>
 
-    <div class="section">
-      <button class="clear-btn" onclick="clearChat()">清空对话</button>
+      <div class="section">
+        <div class="section-title">系统提示词</div>
+        <label>可选，用来设定对话的角色或风格</label>
+        <textarea id="system-prompt" placeholder="例如：你是一个简洁、友善的中文助手。"></textarea>
+      </div>
+
+      <div class="section">
+        <div class="section-title">生成参数</div>
+        <label>Temperature</label>
+        <div class="slider-row">
+          <input type="range" id="temperature" min="0" max="1.5" step="0.1" value="0.7"
+            oninput="document.getElementById('temp-val').textContent = this.value">
+          <span class="slider-val" id="temp-val">0.7</span>
+        </div>
+      </div>
+
+      <div class="section">
+        <button class="clear-btn" onclick="clearCurrentChat()">清空当前对话</button>
+      </div>
     </div>
 
   </aside>
@@ -377,14 +509,14 @@
   <!-- ── Chat pane ── -->
   <div class="chat-pane">
     <div class="chat-toolbar">
-      <div class="chat-toolbar-title">与 Agnes 2.0 Flash 对话</div>
+      <div class="chat-toolbar-title" id="chat-toolbar-title">与 Agnes 2.0 Flash 对话</div>
     </div>
 
     <div class="chat-body" id="chat-body">
       <div class="empty-state" id="empty-state">
         <div class="empty-icon">✦</div>
         <div class="empty-title">还没有对话</div>
-        <div class="empty-sub">在右下方输入你的 API Key 和消息，回车或点击发送即可开始。</div>
+        <div class="empty-sub">点击左侧「＋ 新建」创建对话，或输入 API Key 后直接发送消息。</div>
       </div>
     </div>
 
@@ -405,16 +537,199 @@
 
 <script>
 /* ════════════════════════════════════════════
-   Config & state
+   Storage keys & helpers
 ══════════════════════════════════════════════ */
+const STORAGE_CONV_LIST = 'agnes-conv-list-v1';   // 对话元数据列表
+const STORAGE_CONV_MSG  = 'agnes-conv-msg-v1-';   // 每条对话的消息（前缀 + id）
+
 const API_BASE = 'https://apihub.agnes-ai.com';
-let history = []; // { role: 'user'|'assistant', content: string }
 let busy = false;
 
+// 当前激活的对话 id
+let activeConvId = null;
+// 当前对话的消息列表（内存）
+let history = [];
+
+/* ── 对话元数据 { id, name, createdAt, updatedAt } ── */
+function loadConvList() {
+  try {
+    const raw = localStorage.getItem(STORAGE_CONV_LIST);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+
+function saveConvList(list) {
+  localStorage.setItem(STORAGE_CONV_LIST, JSON.stringify(list));
+}
+
+function loadConvMessages(id) {
+  try {
+    const raw = localStorage.getItem(STORAGE_CONV_MSG + id);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+
+function saveConvMessages(id, messages) {
+  localStorage.setItem(STORAGE_CONV_MSG + id, JSON.stringify(messages));
+}
+
+function deleteConvMessages(id) {
+  localStorage.removeItem(STORAGE_CONV_MSG + id);
+}
+
+/* ════════════════════════════════════════════
+   Conversation management
+══════════════════════════════════════════════ */
+function newConversation() {
+  const list = loadConvList();
+  const id = 'conv-' + Date.now();
+  const name = '新对话 ' + (list.length + 1);
+  const now = new Date().toISOString();
+  list.unshift({ id, name, createdAt: now, updatedAt: now });
+  saveConvList(list);
+  switchConversation(id);
+  renderConvList();
+}
+
+function switchConversation(id) {
+  activeConvId = id;
+  history = loadConvMessages(id);
+  renderChatBody();
+  updateToolbarTitle();
+  renderConvList(); // 更新选中态
+}
+
+function renameConversation(id, newName) {
+  const list = loadConvList();
+  const conv = list.find(c => c.id === id);
+  if (conv) {
+    conv.name = newName.trim() || conv.name;
+    conv.updatedAt = new Date().toISOString();
+    saveConvList(list);
+  }
+  updateToolbarTitle();
+}
+
+function deleteConversation(id) {
+  let list = loadConvList();
+  list = list.filter(c => c.id !== id);
+  saveConvList(list);
+  deleteConvMessages(id);
+
+  if (activeConvId === id) {
+    // 切换到下一条或清空
+    if (list.length > 0) {
+      switchConversation(list[0].id);
+    } else {
+      activeConvId = null;
+      history = [];
+      renderChatBody();
+      updateToolbarTitle();
+    }
+  }
+  renderConvList();
+}
+
+/* ════════════════════════════════════════════
+   Sidebar rendering
+══════════════════════════════════════════════ */
+function renderConvList() {
+  const list = loadConvList();
+  const container = document.getElementById('conv-list');
+
+  if (!list.length) {
+    container.innerHTML = '<div class="conv-empty">暂无对话记录</div>';
+    return;
+  }
+
+  container.innerHTML = list.map(conv => `
+    <div class="conv-item ${conv.id === activeConvId ? 'active' : ''}"
+         id="conv-item-${conv.id}"
+         onclick="handleConvClick('${conv.id}', event)">
+      <span class="conv-icon">💬</span>
+      <span class="conv-name" id="conv-name-${conv.id}">${escapeHtml(conv.name)}</span>
+      <div class="conv-actions">
+        <button class="conv-action-btn" title="重命名"
+          onclick="startRename('${conv.id}', event)">✏️</button>
+        <button class="conv-action-btn del" title="删除"
+          onclick="confirmDelete('${conv.id}', event)">🗑</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function handleConvClick(id, e) {
+  // 如果点的是操作按钮则不切换
+  if (e.target.closest('.conv-action-btn')) return;
+  if (id === activeConvId) return;
+  switchConversation(id);
+}
+
+let renamingId = null;
+
+function startRename(id, e) {
+  e.stopPropagation();
+  if (renamingId) cancelRename();
+  renamingId = id;
+
+  const list = loadConvList();
+  const conv = list.find(c => c.id === id);
+  if (!conv) return;
+
+  const nameEl = document.getElementById('conv-name-' + id);
+  const input = document.createElement('input');
+  input.className = 'conv-name-input';
+  input.value = conv.name;
+  input.onclick = e => e.stopPropagation();
+  input.onkeydown = e => {
+    if (e.key === 'Enter') { e.preventDefault(); commitRename(id, input.value); }
+    if (e.key === 'Escape') cancelRename();
+  };
+  input.onblur = () => commitRename(id, input.value);
+  nameEl.replaceWith(input);
+  input.focus();
+  input.select();
+}
+
+function commitRename(id, value) {
+  renamingId = null;
+  renameConversation(id, value);
+  renderConvList();
+}
+
+function cancelRename() {
+  renamingId = null;
+  renderConvList();
+}
+
+function confirmDelete(id, e) {
+  e.stopPropagation();
+  const list = loadConvList();
+  const conv = list.find(c => c.id === id);
+  if (!conv) return;
+  if (confirm(`确认删除对话「${conv.name}」？此操作不可恢复。`)) {
+    deleteConversation(id);
+  }
+}
+
+function updateToolbarTitle() {
+  const titleEl = document.getElementById('chat-toolbar-title');
+  if (!activeConvId) {
+    titleEl.textContent = '与 Agnes 2.0 Flash 对话';
+    return;
+  }
+  const list = loadConvList();
+  const conv = list.find(c => c.id === activeConvId);
+  titleEl.textContent = conv ? conv.name : '与 Agnes 2.0 Flash 对话';
+}
+
+/* ════════════════════════════════════════════
+   Config & state
+══════════════════════════════════════════════ */
 function getKey() {
   return document.getElementById('api-key-input').value.trim();
 }
-function setStatus(s) { // 'ok' | 'err' | 'busy' | ''
+function setStatus(s) {
   const el = document.getElementById('status-pill');
   el.className = 'status-pill' + (s ? ` ${s}` : '');
   el.textContent = { ok: '✓ 就绪', err: '✗ 错误', busy: '⟳ 思考中', '': '未配置' }[s] || '';
@@ -444,8 +759,33 @@ chatInput.addEventListener('keydown', e => {
 });
 
 /* ════════════════════════════════════════════
-   Rendering
+   Chat body rendering
 ══════════════════════════════════════════════ */
+function renderChatBody() {
+  const body = document.getElementById('chat-body');
+
+  if (!history.length) {
+    body.innerHTML = `<div class="empty-state" id="empty-state">
+      <div class="empty-icon">✦</div>
+      <div class="empty-title">还没有对话</div>
+      <div class="empty-sub">输入消息，按 Enter 发送即可开始。</div>
+    </div>`;
+    return;
+  }
+
+  body.innerHTML = '';
+  history.forEach(msg => {
+    const wrap = document.createElement('div');
+    wrap.className = `msg ${msg.role}`;
+    wrap.innerHTML = `
+      <div class="msg-role">${msg.role === 'user' ? '你' : 'Agnes'}</div>
+      <div class="msg-bubble">${escapeHtml(msg.content)}</div>
+    `;
+    body.appendChild(wrap);
+  });
+  body.scrollTop = body.scrollHeight;
+}
+
 function hideEmpty() {
   const el = document.getElementById('empty-state');
   if (el) el.remove();
@@ -486,14 +826,12 @@ function addTypingBubble() {
   return wrap.querySelector('.msg-bubble');
 }
 
-function clearChat() {
+function clearCurrentChat() {
+  if (!activeConvId) { toast('请先选择或新建一个对话', 'err'); return; }
+  if (!confirm('确认清空当前对话的所有消息？')) return;
   history = [];
-  const body = document.getElementById('chat-body');
-  body.innerHTML = `<div class="empty-state" id="empty-state">
-    <div class="empty-icon">✦</div>
-    <div class="empty-title">还没有对话</div>
-    <div class="empty-sub">在右下方输入你的 API Key 和消息，回车或点击发送即可开始。</div>
-  </div>`;
+  saveConvMessages(activeConvId, history);
+  renderChatBody();
 }
 
 let toastTimer;
@@ -503,6 +841,23 @@ function toast(msg, type = '') {
   el.className = `show ${type}`;
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => el.className = '', 3200);
+}
+
+/* ════════════════════════════════════════════
+   Auto-name: 用第一条用户消息的前 12 字作为对话名
+══════════════════════════════════════════════ */
+function autoNameConvIfNew(text) {
+  const list = loadConvList();
+  const conv = list.find(c => c.id === activeConvId);
+  if (!conv) return;
+  // 如果名字还是默认"新对话 N"，就自动重命名
+  if (/^新对话\s*\d*$/.test(conv.name)) {
+    conv.name = text.slice(0, 12) + (text.length > 12 ? '…' : '');
+    conv.updatedAt = new Date().toISOString();
+    saveConvList(list);
+    renderConvList();
+    updateToolbarTitle();
+  }
 }
 
 /* ════════════════════════════════════════════
@@ -522,10 +877,18 @@ async function sendMessage() {
   const text = chatInput.value.trim();
   if (!text) return;
 
+  // 若没有激活对话则自动新建
+  if (!activeConvId) newConversation();
+
   chatInput.value = '';
   chatInput.style.height = 'auto';
   addMessage('user', text);
   history.push({ role: 'user', content: text });
+
+  // 自动命名
+  if (history.filter(m => m.role === 'user').length === 1) {
+    autoNameConvIfNew(text);
+  }
 
   const model = document.getElementById('chat-model').value;
   const systemPrompt = document.getElementById('system-prompt').value.trim();
@@ -561,6 +924,14 @@ async function sendMessage() {
 
     bubble.textContent = reply;
     history.push({ role: 'assistant', content: reply });
+
+    // 持久化保存
+    saveConvMessages(activeConvId, history);
+    // 更新对话的 updatedAt
+    const list = loadConvList();
+    const conv = list.find(c => c.id === activeConvId);
+    if (conv) { conv.updatedAt = new Date().toISOString(); saveConvList(list); }
+
     setStatus('ok');
   } catch (e) {
     bubble.classList.add('err');
@@ -573,6 +944,18 @@ async function sendMessage() {
     body.scrollTop = body.scrollHeight;
   }
 }
+
+/* ════════════════════════════════════════════
+   Init
+══════════════════════════════════════════════ */
+(function init() {
+  renderConvList();
+  // 自动打开最近一条对话
+  const list = loadConvList();
+  if (list.length > 0) {
+    switchConversation(list[0].id);
+  }
+})();
 </script>
 </body>
 </html>
