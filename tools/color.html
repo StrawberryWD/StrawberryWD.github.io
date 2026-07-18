@@ -121,6 +121,7 @@
     function setTheme(theme) {
       document.body.classList.toggle('theme-pink', theme === 'pink');
       document.querySelectorAll('.theme-switch button').forEach(btn => btn.classList.toggle('active', btn.dataset.theme === theme));
+      localStorage.setItem('site-theme', theme);
     }
 
     function renderColors(containerId, colors) {
@@ -145,8 +146,10 @@
     }
 
     renderColors('moleskine', moleskineColors);
-    renderColors('dodger', dodgerColors);
     renderColors('standard', standardColors);
+
+    const savedTheme = localStorage.getItem('site-theme') || 'sky';
+    setTheme(savedTheme);
   </script>
 </body>
 </html>

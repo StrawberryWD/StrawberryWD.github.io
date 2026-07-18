@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>代办清单</title>
+  <title>待办清单</title>
   <style>
     :root {
       --bg-top: #eaf6ff;
@@ -73,7 +73,7 @@
   </div>
 
   <div class="card">
-    <h1>代办清单</h1>
+    <h1>待办清单</h1>
     <p>支持新增、完成、筛选、搜索与归档，页面刷新后也会保留。</p>
     <div class="toolbar">
       <div class="row">
@@ -137,6 +137,7 @@
     function setTheme(theme) {
       document.body.classList.toggle('theme-pink', theme === 'pink');
       document.querySelectorAll('.theme-switch button').forEach(btn => btn.classList.toggle('active', btn.dataset.theme === theme));
+      localStorage.setItem('site-theme', theme);
     }
 
     function addTask() {
@@ -240,6 +241,7 @@
 
     loadTasks();
     render();
+    setTheme(localStorage.getItem('site-theme') || 'sky');
   </script>
 </body>
 </html>

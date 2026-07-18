@@ -728,10 +728,10 @@ function setStatus(s) {  // 'ok'|'err'|'busy'|''
 function setTheme(theme) {
   document.body.classList.toggle('theme-pink', theme === 'pink');
   document.querySelectorAll('.theme-switch button').forEach(btn => btn.classList.toggle('active', btn.dataset.theme === theme));
-  localStorage.setItem('ai-theme', theme);
+  localStorage.setItem('site-theme', theme);
 }
 
-const savedTheme = localStorage.getItem('ai-theme') || 'sky';
+const savedTheme = localStorage.getItem('site-theme') || 'sky';
 setTheme(savedTheme);
 
 document.getElementById('api-key-input').addEventListener('input', () => {

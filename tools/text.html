@@ -85,7 +85,7 @@
       { key: '中文标点', label: '中文标点', regex: /[，。！？；：、（）【】《》“”‘’—…]/g },
       { key: '数字', label: '数字', regex: /[0-9]/g },
       { key: '符号', label: '符号', regex: /[^\u4e00-\u9fffA-Za-z0-9\s]/g },
-      { key: '表情符号', label: '表情符号', regex: /[\u2600-\u27BF\u1F300-\u1F6FF]/g },
+      { key: '表情符号', label: '表情符号', regex: /[\u2600-\u27BF]|[\u{1F300}-\u{1FAFF}]/gu },
       { key: '英文标点', label: '英文标点', regex: /[!"#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~]/g },
     ];
     const removeMap = {
@@ -96,7 +96,7 @@
       中文标点: /[，。！？；：、（）【】《》“”‘’—…]/g,
       数字: /[0-9]/g,
       符号: /[^\u4e00-\u9fffA-Za-z0-9\s]/g,
-      表情符号: /[\u2600-\u27BF\u1F300-\u1F6FF]/g,
+      表情符号: /[\u2600-\u27BF]|[\u{1F300}-\u{1FAFF}]/gu,
       英文标点: /[!"#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~]/g
     };
 
@@ -150,10 +150,12 @@
     function setTheme(theme) {
       document.body.classList.toggle('theme-pink', theme === 'pink');
       document.querySelectorAll('.theme-switch button').forEach(btn => btn.classList.toggle('active', btn.dataset.theme === theme));
+      localStorage.setItem('site-theme', theme);
     }
     input.addEventListener('input', updateStats);
     renderChips();
     updateStats();
+    setTheme(localStorage.getItem('site-theme') || 'sky');
   </script>
 </body>
 </html>
