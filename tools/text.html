@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>文本助手</title>
+  <style>
+    :root {
+      --bg-top: #eaf6ff;
+      --bg-bottom: #ffeaf2;
+      --card: rgba(255,255,255,0.92);
+      --text: #213047;
+      --muted: #5e6b7c;
+      --accent: #3f7cff;
+      --accent2: #ff6f91;
+      --border: #dce9f7;
+    }
+    body.theme-pink {
+      --bg-top: #fff2f7;
+      --bg-bottom: #eaf6ff;
+      --accent: #ff6f91;
+      --accent2: #3f7cff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; padding: 24px; font-family: "Source Han Serif SC", "Noto Serif SC", "Songti SC", "SimSun", serif;
+      background: linear-gradient(135deg, var(--bg-top), var(--bg-bottom)); color: var(--text);
+    }
+    .topbar { max-width: 980px; margin: 0 auto 16px; display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .theme-switch button, .topbar a, button { border: none; cursor: pointer; font: inherit; }
+    .theme-switch button { padding: 8px 12px; border-radius: 999px; background: rgba(255,255,255,0.82); color: var(--text); border: 1px solid var(--border); }
+    .theme-switch button.active { background: var(--accent); color: white; }
+    .topbar a { text-decoration: none; color: var(--accent); padding: 8px 12px; border-radius: 999px; background: rgba(255,255,255,0.82); border: 1px solid var(--border); }
+    .card { width: min(92vw, 980px); margin: 0 auto; background: var(--card); border-radius: 28px; padding: 28px; box-shadow: 0 20px 60px rgba(38, 67, 118, 0.12); border: 1px solid var(--border); }
+    h1 { margin: 0 0 6px; font-size: 1.5rem; }
+    p { margin: 0 0 16px; color: var(--muted); }
+    textarea { width: 100%; min-height: 240px; border: 1px solid var(--border); border-radius: 16px; padding: 14px; font-size: 1rem; resize: vertical; font-family: inherit; }
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin: 14px 0 16px; }
+    .stat { background: #f8fbff; border: 1px solid var(--border); border-radius: 14px; padding: 10px 12px; font-size: 0.94rem; }
+    .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+    button { padding: 10px 14px; border-radius: 999px; background: var(--accent); color: white; font-weight: 600; }
+    .ghost { background: #f8fbff; color: #334155; border: 1px solid var(--border); }
+    .footer { margin-top: 16px; color: var(--muted); display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .footer a { color: var(--accent); text-decoration: none; font-weight: 600; }
+    .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+    .chip { padding: 6px 10px; border-radius: 999px; background: #eef6ff; color: #4a5a72; font-size: 0.85rem; border: 1px solid var(--border); }
+    .chip.active { background: rgba(63, 124, 255, 0.16); color: var(--accent); border-color: rgba(63, 124, 255, 0.25); }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="theme-switch" role="toolbar" aria-label="主题切换">
+      <button class="active" data-theme="sky" onclick="setTheme('sky')">天蓝</button>
+      <button data-theme="pink" onclick="setTheme('pink')">浅粉</button>
+    </div>
+    <a href="../index.html">返回首页</a>
+  </div>
+
+  <div class="card">
+    <h1>文本助手</h1>
+    <p>输入内容后即可快速查看字数、段落数，以及多种字符分类统计。</p>
+    <textarea id="text" placeholder="在这里输入你的文字..."></textarea>
+    <div class="stats" id="stats"></div>
+    <div class="actions">
+      <button onclick="copyText()">复制内容</button>
+      <button class="ghost" onclick="clearText()">清空</button>
+      <button class="ghost" onclick="removeSelected()">去除选中类型</button>
+    </div>
+    <div class="chips" id="removeChips"></div>
+    <div class="footer">
+      <span>适合写文案、整理想法与文本清洗。</span>
+      <a href="../index.html">返回首页</a>
+    </div>
+  </div>
+  <script>
+    const input = document.getElementById('text');
+    const statsEl = document.getElementById('stats');
+    const removeChipsEl = document.getElementById('removeChips');
+    const selectedTypes = new Set();
+    const categories = [
+      { key: '汉字', label: '汉字', regex: /[\u4e00-\u9fff]/g },
+      { key: '英文', label: '英文', regex: /[A-Za-z]/g },
+      { key: '大写字母', label: '大写字母', regex: /[A-Z]/g },
+      { key: '小写字母', label: '小写字母', regex: /[a-z]/g },
+      { key: '中文标点', label: '中文标点', regex: /[，。！？；：、（）【】《》“”‘’—…]/g },
+      { key: '数字', label: '数字', regex: /[0-9]/g },
+      { key: '符号', label: '符号', regex: /[^\u4e00-\u9fffA-Za-z0-9\s]/g },
+      { key: '表情符号', label: '表情符号', regex: /[\u2600-\u27BF\u1F300-\u1F6FF]/g },
+      { key: '英文标点', label: '英文标点', regex: /[!"#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~]/g },
+    ];
+    const removeMap = {
+      汉字: /[\u4e00-\u9fff]/g,
+      英文: /[A-Za-z]/g,
+      大写字母: /[A-Z]/g,
+      小写字母: /[a-z]/g,
+      中文标点: /[，。！？；：、（）【】《》“”‘’—…]/g,
+      数字: /[0-9]/g,
+      符号: /[^\u4e00-\u9fffA-Za-z0-9\s]/g,
+      表情符号: /[\u2600-\u27BF\u1F300-\u1F6FF]/g,
+      英文标点: /[!"#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~]/g
+    };
+
+    function countMatches(str, regex) { return (str.match(regex) || []).length; }
+    function renderChips() {
+      removeChipsEl.innerHTML = categories.map(item => `
+        <button class="chip ${selectedTypes.has(item.key) ? 'active' : ''}" onclick="toggleType('${item.key}')">${item.label}</button>
+      `).join('');
+    }
+    function toggleType(key) {
+      if (selectedTypes.has(key)) selectedTypes.delete(key); else selectedTypes.add(key);
+      renderChips();
+    }
+    function updateStats() {
+      const value = input.value;
+      const items = [
+        { label: '字符数', value: value.length },
+        { label: '非空格字符', value: value.replace(/\s/g, '').length },
+        { label: '单词数', value: value.trim() ? value.trim().split(/\s+/).length : 0 },
+        { label: '行数', value: value ? value.split(/\n/).length : 0 },
+        { label: '段落数', value: value.trim() ? value.trim().split(/\n\s*\n/).filter(Boolean).length : 0 },
+        ...categories.map(item => ({ label: item.label, value: countMatches(value, item.regex) }))
+      ];
+      statsEl.innerHTML = items.map(item => `<div class="stat">${item.label}：<strong>${item.value}</strong></div>`).join('');
+    }
+    function copyText() {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(input.value).then(() => alert('已复制到剪贴板'));
+      } else {
+        const tmp = document.createElement('textarea');
+        tmp.value = input.value;
+        document.body.appendChild(tmp);
+        tmp.select();
+        document.execCommand('copy');
+        document.body.removeChild(tmp);
+        alert('已复制到剪贴板');
+      }
+    }
+    function clearText() {
+      input.value = '';
+      updateStats();
+    }
+    function removeSelected() {
+      let cleaned = input.value;
+      selectedTypes.forEach(type => {
+        cleaned = cleaned.replace(removeMap[type], '');
+      });
+      input.value = cleaned;
+      updateStats();
+    }
+    function setTheme(theme) {
+      document.body.classList.toggle('theme-pink', theme === 'pink');
+      document.querySelectorAll('.theme-switch button').forEach(btn => btn.classList.toggle('active', btn.dataset.theme === theme));
+    }
+    input.addEventListener('input', updateStats);
+    renderChips();
+    updateStats();
+  </script>
+</body>
+</html>

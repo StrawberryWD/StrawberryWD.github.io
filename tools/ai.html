@@ -1,0 +1,1229 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 创作台</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+  :root {
+    --bg-top: #eaf6ff;
+    --bg-bottom: #ffeaf2;
+    --bg:       #f5f7fb;
+    --surface:  #ffffff;
+    --panel:    #f8faff;
+    --border:   #dfe4ee;
+    --border2:  #cfd8e6;
+    --text:     #172033;
+    --muted:    #64748b;
+    --accent:   #5b6cff;
+    --accent2:  #7c93ff;
+    --green:    #16a34a;
+    --red:      #dc2626;
+    --amber:    #d97706;
+    --radius:   12px;
+    --radius-sm:8px;
+  }
+
+  body.theme-pink {
+    --bg-top: #fff2f7;
+    --bg-bottom: #eaf6ff;
+    --accent: #ff6f91;
+    --accent2: #3f7cff;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Source Han Serif SC', 'Noto Serif SC', 'Songti SC', 'SimSun', serif;
+    background: linear-gradient(135deg, var(--bg-top), var(--bg-bottom));
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 24px;
+    background: rgba(255,255,255,0.8);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border);
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .theme-switch { display: flex; gap: 8px; }
+  .theme-switch button, .topbar a {
+    border: none;
+    cursor: pointer;
+    font: inherit;
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.9);
+    color: var(--text);
+    border: 1px solid var(--border);
+    text-decoration: none;
+  }
+  .theme-switch button.active { background: var(--accent); color: white; }
+
+  /* ── Header ── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 28px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(255,255,255,.9);
+    backdrop-filter: blur(12px);
+    position: sticky; top: 0; z-index: 50;
+  }
+  .logo {
+    display: flex; align-items: center; gap: 10px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.15rem; font-weight: 700; letter-spacing: -.02em;
+  }
+  .logo-dot {
+    width: 28px; height: 28px; border-radius: 8px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+  }
+  .logo span { color: var(--muted); font-weight: 400; }
+
+  .api-row {
+    display: flex; align-items: center; gap: 10px;
+  }
+  .api-label { font-size: .75rem; color: var(--muted); }
+  #api-key-input {
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--text); padding: 7px 12px;
+    border-radius: var(--radius-sm); font-size: .8rem;
+    width: 220px; outline: none;
+    font-family: 'Space Grotesk', monospace;
+    transition: border .2s;
+  }
+  #api-key-input:focus { border-color: var(--accent); }
+  #api-key-input::placeholder { color: var(--muted); }
+
+  .status-pill {
+    padding: 4px 10px; border-radius: 99px;
+    font-size: .72rem; font-weight: 500;
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--muted); white-space: nowrap;
+    transition: all .3s;
+  }
+  .status-pill.ok   { border-color: var(--green); color: var(--green); background: rgba(52,211,153,.08); }
+  .status-pill.err  { border-color: var(--red);   color: var(--red);   background: rgba(248,113,113,.08); }
+  .status-pill.busy { border-color: var(--amber);  color: var(--amber);  background: rgba(251,191,36,.08); }
+
+  /* ── Main layout ── */
+  .workspace {
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    gap: 0;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    overflow-y: auto;
+    height: calc(100vh - 65px);
+  }
+
+  /* Mode tabs */
+  .mode-tabs {
+    display: grid; grid-template-columns: 1fr 1fr;
+    border-bottom: 1px solid var(--border);
+  }
+  .mode-tab {
+    padding: 14px; text-align: center;
+    font-size: .8rem; font-weight: 500;
+    cursor: pointer; color: var(--muted);
+    border: none; background: transparent;
+    transition: all .2s; position: relative;
+  }
+  .mode-tab::after {
+    content: ''; position: absolute; bottom: 0; left: 20%; right: 20%;
+    height: 2px; border-radius: 2px 2px 0 0;
+    background: var(--accent); transform: scaleX(0); transition: transform .2s;
+  }
+  .mode-tab.active { color: var(--text); }
+  .mode-tab.active::after { transform: scaleX(1); }
+  .mode-tab-icon { font-size: 1.1rem; display: block; margin-bottom: 3px; }
+
+  /* Sections */
+  .section { padding: 18px 20px; border-bottom: 1px solid var(--border); }
+  .section-title {
+    font-size: .72rem; font-weight: 600; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--muted);
+    margin-bottom: 12px;
+  }
+
+  label { font-size: .8rem; color: var(--muted); display: block; margin-bottom: 5px; }
+
+  textarea, select, input[type=number], input[type=text] {
+    width: 100%; background: var(--surface);
+    border: 1px solid var(--border); color: var(--text);
+    border-radius: var(--radius-sm); font-size: .82rem;
+    font-family: inherit; outline: none; transition: border .2s;
+  }
+  textarea:focus, select:focus, input:focus { border-color: var(--accent); }
+
+  textarea {
+    padding: 10px 12px; resize: vertical; min-height: 90px;
+    line-height: 1.5;
+  }
+  select, input[type=number] { padding: 8px 10px; }
+
+  .input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  /* Toggle group */
+  .toggle-group { display: flex; gap: 6px; flex-wrap: wrap; }
+  .toggle-btn {
+    padding: 5px 12px; border-radius: var(--radius-sm);
+    border: 1px solid var(--border); background: var(--surface);
+    color: var(--muted); font-size: .78rem; cursor: pointer;
+    transition: all .2s;
+  }
+  .toggle-btn.active {
+    border-color: var(--accent); color: var(--accent2);
+    background: rgba(124,109,250,.12);
+  }
+
+  /* Image upload zone */
+  .upload-zone {
+    border: 2px dashed var(--border); border-radius: var(--radius);
+    padding: 20px; text-align: center; cursor: pointer;
+    transition: all .2s; position: relative;
+  }
+  .upload-zone:hover, .upload-zone.dragover {
+    border-color: var(--accent); background: rgba(124,109,250,.06);
+  }
+  .upload-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .upload-zone-text { font-size: .8rem; color: var(--muted); }
+  .upload-preview {
+    width: 100%; border-radius: var(--radius-sm);
+    max-height: 130px; object-fit: cover; display: none;
+    margin-top: 8px;
+  }
+
+  .url-input { margin-top: 8px; }
+  .url-input input { padding: 7px 10px; }
+
+  /* Keyframe list */
+  .keyframe-list { display: flex; flex-direction: column; gap: 8px; }
+  .keyframe-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px; background: var(--surface);
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+  }
+  .keyframe-thumb {
+    width: 44px; height: 44px; object-fit: cover;
+    border-radius: 6px; flex-shrink: 0;
+  }
+  .keyframe-name { flex: 1; font-size: .78rem; color: var(--muted); truncate; }
+  .rm-btn {
+    width: 20px; height: 20px; border-radius: 50%;
+    border: none; background: rgba(248,113,113,.15);
+    color: var(--red); font-size: 12px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* Generate button */
+  .gen-btn {
+    width: calc(100% - 40px); margin: 16px 20px;
+    padding: 13px; border: none; border-radius: var(--radius);
+    background: linear-gradient(135deg, var(--accent), #9f8bf8);
+    color: #fff; font-size: .9rem; font-weight: 600;
+    cursor: pointer; transition: all .25s;
+    font-family: 'Space Grotesk', sans-serif;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    box-shadow: 0 4px 24px rgba(124,109,250,.3);
+    position: relative; overflow: hidden;
+  }
+  .gen-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 30px rgba(124,109,250,.4); }
+  .gen-btn:active { transform: translateY(0); }
+  .gen-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+  .gen-btn .shimmer {
+    position: absolute; inset: 0;
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,.15) 50%, transparent 100%);
+    transform: translateX(-100%);
+    animation: none;
+  }
+  .gen-btn.loading .shimmer { animation: shimmer 1.4s infinite; }
+  @keyframes shimmer { to { transform: translateX(100%); } }
+
+  /* ── Canvas ── */
+  .canvas {
+    display: flex; flex-direction: column;
+    height: calc(100vh - 65px); overflow: hidden;
+  }
+
+  .canvas-toolbar {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 20px; border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .canvas-toolbar-title {
+    font-size: .82rem; font-weight: 600; flex: 1;
+  }
+  .icon-btn {
+    width: 32px; height: 32px; border-radius: var(--radius-sm);
+    border: 1px solid var(--border); background: var(--panel);
+    color: var(--muted); cursor: pointer; font-size: 15px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all .2s;
+  }
+  .icon-btn:hover { border-color: var(--border2); color: var(--text); }
+
+  .canvas-body {
+    flex: 1; overflow-y: auto; padding: 24px;
+    display: flex; flex-direction: column; gap: 20px;
+  }
+
+  /* Result cards */
+  .result-card {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: var(--radius); overflow: hidden;
+    animation: fadeUp .35s ease both;
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .result-card-header {
+    padding: 12px 16px;
+    display: flex; align-items: center; gap: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .result-badge {
+    padding: 2px 8px; border-radius: 99px; font-size: .7rem; font-weight: 600;
+  }
+  .badge-img  { background: rgba(124,109,250,.15); color: var(--accent2); }
+  .badge-vid  { background: rgba(52,211,153,.12);  color: var(--green); }
+  .result-meta { flex: 1; font-size: .75rem; color: var(--muted); }
+  .result-actions { display: flex; gap: 6px; }
+
+  .result-img {
+    width: 100%; display: block;
+    max-height: 540px; object-fit: contain;
+    background: #0a0a0f;
+  }
+
+  .result-video { width: 100%; display: block; max-height: 480px; background: #000; }
+
+  /* Progress bar */
+  .progress-wrap {
+    padding: 24px 20px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .progress-label {
+    display: flex; justify-content: space-between;
+    font-size: .78rem; color: var(--muted);
+  }
+  .progress-bar-bg {
+    height: 6px; border-radius: 99px;
+    background: var(--border); overflow: hidden;
+  }
+  .progress-bar-fill {
+    height: 100%; border-radius: 99px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    transition: width .5s ease;
+  }
+  .progress-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--amber); animation: blink 1.2s infinite;
+    flex-shrink: 0;
+  }
+  @keyframes blink { 0%,100% { opacity:1; } 50% { opacity:.3; } }
+
+  /* Empty state */
+  .empty-state {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    color: var(--muted); text-align: center; gap: 12px;
+  }
+  .empty-icon { font-size: 3rem; opacity: .3; }
+  .empty-title { font-family: 'Space Grotesk', sans-serif; font-size: 1rem; }
+  .empty-sub { font-size: .8rem; max-width: 280px; line-height: 1.6; }
+
+  /* Toast */
+  #toast {
+    position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(12px);
+    padding: 10px 18px; border-radius: var(--radius);
+    font-size: .82rem; font-weight: 500;
+    background: var(--panel); border: 1px solid var(--border);
+    color: var(--text); opacity: 0; transition: all .3s;
+    pointer-events: none; z-index: 999;
+    backdrop-filter: blur(10px);
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  #toast.err  { border-color: var(--red);   color: var(--red); }
+  #toast.ok   { border-color: var(--green); color: var(--green); }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 99px; }
+
+  /* Panel visibility */
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* Slider */
+  .slider-row { display: flex; align-items: center; gap: 10px; }
+  input[type=range] {
+    flex: 1; -webkit-appearance: none; height: 4px;
+    border-radius: 99px; background: var(--border); cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 14px; height: 14px;
+    border-radius: 50%; background: var(--accent); border: none;
+  }
+  .slider-val {
+    min-width: 38px; text-align: right;
+    font-size: .8rem; color: var(--accent2);
+    font-family: 'Space Grotesk', sans-serif;
+  }
+
+  /* History strip */
+  .history-strip {
+    display: flex; gap: 8px; padding: 10px 20px;
+    border-top: 1px solid var(--border);
+    overflow-x: auto; background: var(--surface);
+    min-height: 72px; align-items: center;
+  }
+  .hist-thumb {
+    width: 48px; height: 48px; border-radius: 8px;
+    object-fit: cover; cursor: pointer; flex-shrink: 0;
+    border: 2px solid transparent; transition: border .2s;
+    opacity: .7; transition: all .2s;
+  }
+  .hist-thumb:hover { border-color: var(--accent); opacity: 1; }
+  .hist-empty { font-size: .75rem; color: var(--muted); }
+
+  .return-home {
+    padding: 16px 24px 24px;
+    text-align: center;
+  }
+  .return-home a {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-radius: 999px;
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    text-decoration: none;
+    font-size: .85rem;
+    font-weight: 600;
+    box-shadow: 0 6px 18px rgba(91,108,255,.12);
+    transition: transform .2s, box-shadow .2s;
+  }
+  .return-home a:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 22px rgba(91,108,255,.18);
+  }
+
+  @media (max-width: 800px) {
+    .workspace { grid-template-columns: 1fr; }
+    .sidebar { height: auto; max-height: 55vh; }
+    .canvas { height: auto; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-title">AI 创作台</div>
+  <div class="theme-switch" role="toolbar" aria-label="主题切换">
+    <button class="active" data-theme="sky" onclick="setTheme('sky')">天蓝</button>
+    <button data-theme="pink" onclick="setTheme('pink')">浅粉</button>
+  </div>
+  <a href="../index.html">← 返回主页</a>
+</div>
+
+<!-- Header -->
+<header>
+  <div class="logo">
+    <div class="logo-dot">✦</div>
+    Agnes <span>Studio</span>
+  </div>
+  <div class="api-row">
+    <span class="api-label">API Key</span>
+    <input id="api-key-input" type="password" placeholder="sk-..." autocomplete="off">
+    <div id="status-pill" class="status-pill">未配置</div>
+  </div>
+</header>
+
+<div class="workspace">
+
+  <!-- ── Sidebar ── -->
+  <aside class="sidebar">
+
+    <!-- Mode tabs -->
+    <div class="mode-tabs">
+      <button class="mode-tab active" id="tab-image" onclick="switchMode('image')">
+        <span class="mode-tab-icon">🖼</span> 图片生成
+      </button>
+      <button class="mode-tab" id="tab-video" onclick="switchMode('video')">
+        <span class="mode-tab-icon">🎬</span> 视频生成
+      </button>
+    </div>
+
+    <!-- ===== IMAGE PANEL ===== -->
+    <div id="panel-image" class="panel active">
+
+      <!-- Model -->
+      <div class="section">
+        <div class="section-title">模型 &amp; 模式</div>
+        <label>选择模型</label>
+        <select id="img-model">
+          <option value="agnes-image-2.1-flash">agnes-image-2.1-flash · 最新高清</option>
+          <option value="agnes-image-2.0-flash">agnes-image-2.0-flash · 编辑增强</option>
+        </select>
+
+        <div style="margin-top:12px">
+          <label>生成模式</label>
+          <div class="toggle-group" id="img-mode-group">
+            <button class="toggle-btn active" data-val="text2img" onclick="selectToggle('img-mode-group',this)">文生图</button>
+            <button class="toggle-btn" data-val="img2img" onclick="selectToggle('img-mode-group',this)">图生图</button>
+            <button class="toggle-btn" data-val="multi" onclick="selectToggle('img-mode-group',this)">多图合成</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Prompt -->
+      <div class="section">
+        <div class="section-title">提示词</div>
+        <label>正向描述</label>
+        <textarea id="img-prompt" placeholder="描述你想生成的画面，可包含主体、场景、风格、光线…" rows="4"></textarea>
+        <div style="margin-top:10px">
+          <label>快捷风格</label>
+          <div class="toggle-group" id="style-group">
+            <button class="toggle-btn" onclick="appendStyle('电影级真实感')">电影感</button>
+            <button class="toggle-btn" onclick="appendStyle('赛博朋克霓虹灯')">赛博朋克</button>
+            <button class="toggle-btn" onclick="appendStyle('水墨国画风格')">水墨</button>
+            <button class="toggle-btn" onclick="appendStyle('吉卜力动画风格')">吉卜力</button>
+            <button class="toggle-btn" onclick="appendStyle('商业摄影棚光效')">商业摄影</button>
+            <button class="toggle-btn" onclick="appendStyle('超详细奇幻插画')">奇幻</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Image input (hidden when text2img) -->
+      <div class="section" id="img-input-section" style="display:none">
+        <div class="section-title">输入图片</div>
+        <div id="img-input-single" style="display:none">
+          <div class="upload-zone" id="upload-zone-single">
+            <input type="file" accept="image/*" id="img-file-single" onchange="handleFileUpload(this, 'single')">
+            <div class="upload-zone-text">📁 点击或拖拽上传图片</div>
+            <img class="upload-preview" id="preview-single">
+          </div>
+          <div class="url-input">
+            <label>或输入图片 URL</label>
+            <input type="text" id="img-url-single" placeholder="https://example.com/image.png">
+          </div>
+        </div>
+        <div id="img-input-multi" style="display:none">
+          <div class="keyframe-list" id="kf-list-img"></div>
+          <button class="toggle-btn" style="margin-top:8px;width:100%;justify-content:center" onclick="addKeyframeInput('img')">+ 添加参考图</button>
+        </div>
+      </div>
+
+      <!-- Size & params -->
+      <div class="section">
+        <div class="section-title">尺寸 &amp; 参数</div>
+        <div class="input-row">
+          <div>
+            <label>尺寸规格</label>
+            <select id="img-size">
+              <option value="1024x1024">1024×1024 · 方形</option>
+              <option value="1024x768" selected>1024×768 · 横屏</option>
+              <option value="768x1024">768×1024 · 竖屏</option>
+              <option value="1280x720">1280×720 · 16:9</option>
+              <option value="720x1280">720×1280 · 9:16</option>
+            </select>
+          </div>
+          <div>
+            <label>输出格式</label>
+            <select id="img-format">
+              <option value="url">URL 链接</option>
+              <option value="base64">Base64</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- /IMAGE PANEL -->
+
+    <!-- ===== VIDEO PANEL ===== -->
+    <div id="panel-video" class="panel">
+
+      <!-- Model -->
+      <div class="section">
+        <div class="section-title">模型 &amp; 模式</div>
+        <label>选择模型</label>
+        <select id="vid-model">
+          <option value="agnes-video-v2.0">agnes-video-v2.0 · 最新</option>
+          <option value="agnes-video-v1.2">agnes-video-v1.2 · 旧版</option>
+        </select>
+
+        <div style="margin-top:12px">
+          <label>生成模式</label>
+          <div class="toggle-group" id="vid-mode-group">
+            <button class="toggle-btn active" data-val="t2v" onclick="selectToggle('vid-mode-group',this)">文生视频</button>
+            <button class="toggle-btn" data-val="i2v" onclick="selectToggle('vid-mode-group',this)">图生视频</button>
+            <button class="toggle-btn" data-val="keyframe" onclick="selectToggle('vid-mode-group',this)">关键帧动画</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Prompt -->
+      <div class="section">
+        <div class="section-title">提示词</div>
+        <label>画面描述</label>
+        <textarea id="vid-prompt" placeholder="描述视频内容、动作、场景、镜头运动…" rows="4"></textarea>
+        <div style="margin-top:10px">
+          <label>负向提示</label>
+          <textarea id="vid-neg-prompt" placeholder="不想出现的内容（可选）" rows="2"></textarea>
+        </div>
+        <div style="margin-top:10px">
+          <label>镜头风格</label>
+          <div class="toggle-group">
+            <button class="toggle-btn" onclick="appendVidStyle('缓慢推镜，电影感')">推镜</button>
+            <button class="toggle-btn" onclick="appendVidStyle('跟踪拍摄，流畅运动')">跟踪</button>
+            <button class="toggle-btn" onclick="appendVidStyle('鸟瞰视角')">鸟瞰</button>
+            <button class="toggle-btn" onclick="appendVidStyle('慢动作特写')">慢镜</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Image input for i2v / keyframe -->
+      <div class="section" id="vid-input-section" style="display:none">
+        <div class="section-title" id="vid-input-title">参考图片</div>
+        <div id="vid-input-single">
+          <div class="upload-zone">
+            <input type="file" accept="image/*" id="vid-file" onchange="handleFileUpload(this,'vid')">
+            <div class="upload-zone-text">📁 点击上传参考图</div>
+            <img class="upload-preview" id="preview-vid">
+          </div>
+          <div class="url-input">
+            <label>或输入图片 URL</label>
+            <input type="text" id="vid-img-url" placeholder="https://example.com/image.png">
+          </div>
+        </div>
+        <div id="vid-input-multi" style="display:none">
+          <div class="keyframe-list" id="kf-list-vid"></div>
+          <button class="toggle-btn" style="margin-top:8px;width:100%;justify-content:center" onclick="addKeyframeInput('vid')">+ 添加关键帧</button>
+        </div>
+      </div>
+
+      <!-- Video params -->
+      <div class="section">
+        <div class="section-title">视频参数</div>
+        <div class="input-row">
+          <div>
+            <label>分辨率</label>
+            <select id="vid-resolution">
+              <option value="1152x768">1152×768 · 横屏</option>
+              <option value="768x1152">768×1152 · 竖屏</option>
+              <option value="768x768">768×768 · 方形</option>
+              <option value="1280x720">1280×720 · 16:9</option>
+            </select>
+          </div>
+          <div>
+            <label>时长预设</label>
+            <select id="vid-duration" onchange="updateFrames()">
+              <option value="81">约3秒 (81帧)</option>
+              <option value="121" selected>约5秒 (121帧)</option>
+              <option value="241">约10秒 (241帧)</option>
+              <option value="441">约18秒 (441帧)</option>
+            </select>
+          </div>
+        </div>
+        <div style="margin-top:12px">
+          <label>帧率 <span class="slider-val" id="fps-val">24 fps</span></label>
+          <div class="slider-row">
+            <input type="range" id="vid-fps" min="8" max="30" value="24" step="1"
+              oninput="document.getElementById('fps-val').textContent=this.value+' fps'">
+          </div>
+        </div>
+        <div style="margin-top:12px">
+          <div class="input-row">
+            <div>
+              <label>推理步数（可选）</label>
+              <input type="number" id="vid-steps" min="1" max="100" placeholder="默认">
+            </div>
+            <div>
+              <label>随机种子</label>
+              <input type="number" id="vid-seed" placeholder="随机">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- /VIDEO PANEL -->
+
+    <!-- Generate button -->
+    <button class="gen-btn" id="gen-btn" onclick="generate()">
+      <span class="shimmer"></span>
+      <span id="gen-btn-text">✦ 开始生成</span>
+    </button>
+
+  </aside>
+
+  <!-- ── Canvas ── -->
+  <div class="canvas">
+    <div class="canvas-toolbar">
+      <span class="canvas-toolbar-title" id="canvas-title">创作画布</span>
+      <button class="icon-btn" title="清空画布" onclick="clearCanvas()">🗑</button>
+      <button class="icon-btn" title="全部下载" onclick="downloadAll()">⬇</button>
+    </div>
+
+    <div class="canvas-body" id="canvas-body">
+      <div class="empty-state" id="empty-state">
+        <div class="empty-icon">✦</div>
+        <div class="empty-title">画布空空如也</div>
+        <div class="empty-sub">填写提示词并点击「开始生成」，图片或视频将在这里呈现。</div>
+      </div>
+    </div>
+
+    <!-- History strip -->
+    <div class="history-strip" id="history-strip">
+      <span class="hist-empty" id="hist-empty">暂无历史</span>
+    </div>
+  </div>
+
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+/* ════════════════════════════════════════════
+   State & Config
+══════════════════════════════════════════════ */
+const API_BASE = 'https://apihub.agnes-ai.com';
+let mode = 'image';          // 'image' | 'video'
+let results = [];             // {type, url, thumb, meta}
+let uploadsCache = {};        // key → dataURL
+
+function getKey() {
+  return document.getElementById('api-key-input').value.trim();
+}
+function setStatus(s) {  // 'ok'|'err'|'busy'|''
+  const el = document.getElementById('status-pill');
+  el.className = 'status-pill' + (s ? ` ${s}` : '');
+  el.textContent = {ok:'✓ 就绪', err:'✗ 错误', busy:'⟳ 生成中', '':'未配置'}[s] || '';
+}
+
+function setTheme(theme) {
+  document.body.classList.toggle('theme-pink', theme === 'pink');
+  document.querySelectorAll('.theme-switch button').forEach(btn => btn.classList.toggle('active', btn.dataset.theme === theme));
+  localStorage.setItem('ai-theme', theme);
+}
+
+const savedTheme = localStorage.getItem('ai-theme') || 'sky';
+setTheme(savedTheme);
+
+document.getElementById('api-key-input').addEventListener('input', () => {
+  setStatus(getKey() ? 'ok' : '');
+});
+
+/* ════════════════════════════════════════════
+   Mode switching
+══════════════════════════════════════════════ */
+function switchMode(m) {
+  mode = m;
+  ['image','video'].forEach(k => {
+    document.getElementById(`tab-${k}`).classList.toggle('active', k===m);
+    document.querySelectorAll(`#panel-${k}`).forEach(el =>
+      el.classList.toggle('active', k===m));
+  });
+}
+
+/* ════════════════════════════════════════════
+   Toggle helpers
+══════════════════════════════════════════════ */
+function selectToggle(groupId, btn) {
+  document.querySelectorAll(`#${groupId} .toggle-btn`).forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+
+  // side effects
+  if (groupId === 'img-mode-group') updateImgInputSection();
+  if (groupId === 'vid-mode-group') updateVidInputSection();
+}
+
+function getActiveVal(groupId) {
+  const el = document.querySelector(`#${groupId} .toggle-btn.active`);
+  return el ? el.dataset.val : null;
+}
+
+function appendStyle(s) {
+  const ta = document.getElementById('img-prompt');
+  ta.value = (ta.value.trim() + (ta.value.trim() ? ', ' : '') + s);
+  ta.focus();
+}
+function appendVidStyle(s) {
+  const ta = document.getElementById('vid-prompt');
+  ta.value = (ta.value.trim() + (ta.value.trim() ? ', ' : '') + s);
+  ta.focus();
+}
+
+/* ════════════════════════════════════════════
+   Image input section
+══════════════════════════════════════════════ */
+function updateImgInputSection() {
+  const m = getActiveVal('img-mode-group');
+  const sec = document.getElementById('img-input-section');
+  const single = document.getElementById('img-input-single');
+  const multi  = document.getElementById('img-input-multi');
+  if (m === 'text2img') {
+    sec.style.display = 'none';
+  } else if (m === 'img2img') {
+    sec.style.display = '';
+    single.style.display = '';
+    multi.style.display = 'none';
+  } else {
+    sec.style.display = '';
+    single.style.display = 'none';
+    multi.style.display = '';
+  }
+}
+
+function updateVidInputSection() {
+  const m = getActiveVal('vid-mode-group');
+  const sec = document.getElementById('vid-input-section');
+  const title = document.getElementById('vid-input-title');
+  const single = document.getElementById('vid-input-single');
+  const multi = document.getElementById('vid-input-multi');
+  if (m === 't2v') {
+    sec.style.display = 'none';
+  } else if (m === 'i2v') {
+    sec.style.display = '';
+    title.textContent = '参考图片';
+    single.style.display = '';
+    multi.style.display = 'none';
+  } else {
+    sec.style.display = '';
+    title.textContent = '关键帧图片（至少2张）';
+    single.style.display = 'none';
+    multi.style.display = '';
+  }
+}
+
+/* ════════════════════════════════════════════
+   File upload
+══════════════════════════════════════════════ */
+function handleFileUpload(input, slot) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    uploadsCache[slot] = e.target.result;
+    const previewId = slot === 'single' ? 'preview-single' : `preview-${slot}`;
+    const prev = document.getElementById(previewId);
+    if (prev) { prev.src = e.target.result; prev.style.display = 'block'; }
+  };
+  reader.readAsDataURL(file);
+}
+
+let kfCountImg = 0, kfCountVid = 0;
+function addKeyframeInput(ctx) {
+  const listId = `kf-list-${ctx}`;
+  const list = document.getElementById(listId);
+  const idx = ctx === 'img' ? ++kfCountImg : ++kfCountVid;
+  const id = `kf-${ctx}-${idx}`;
+  const item = document.createElement('div');
+  item.className = 'keyframe-item'; item.id = id;
+  item.innerHTML = `
+    <img class="keyframe-thumb" id="thumb-${id}" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E">
+    <div style="flex:1">
+      <input type="text" placeholder="图片 URL 或上传" id="url-${id}"
+        style="margin-bottom:4px" oninput="setKfThumb('${id}',this.value)">
+      <input type="file" accept="image/*" style="font-size:.7rem;color:var(--muted)"
+        onchange="handleKfFile(this,'${id}')">
+    </div>
+    <button class="rm-btn" onclick="document.getElementById('${id}').remove()">✕</button>
+  `;
+  list.appendChild(item);
+}
+function setKfThumb(id, url) {
+  if (url.startsWith('http')) document.getElementById(`thumb-${id}`).src = url;
+}
+function handleKfFile(input, id) {
+  const file = input.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    uploadsCache[id] = e.target.result;
+    document.getElementById(`thumb-${id}`).src = e.target.result;
+    document.getElementById(`url-${id}`).value = '[上传文件]';
+  };
+  reader.readAsDataURL(file);
+}
+
+function getKfUrls(ctx) {
+  const list = document.getElementById(`kf-list-${ctx}`);
+  return [...list.querySelectorAll('.keyframe-item')].map(item => {
+    const id = item.id;
+    return uploadsCache[id] || document.getElementById(`url-${id}`)?.value || '';
+  }).filter(Boolean);
+}
+
+/* ════════════════════════════════════════════
+   Frames helpers
+══════════════════════════════════════════════ */
+function updateFrames() {}
+
+/* ════════════════════════════════════════════
+   Generate
+══════════════════════════════════════════════ */
+async function generate() {
+  const key = getKey();
+  if (!key) { toast('请先输入 API Key', 'err'); return; }
+
+  if (mode === 'image') await generateImage(key);
+  else await generateVideo(key);
+}
+
+/* ── Image generation ── */
+async function generateImage(key) {
+  const prompt = document.getElementById('img-prompt').value.trim();
+  if (!prompt) { toast('请输入提示词', 'err'); return; }
+
+  const model  = document.getElementById('img-model').value;
+  const size   = document.getElementById('img-size').value;
+  const fmt    = document.getElementById('img-format').value;
+  const imgMode = getActiveVal('img-mode-group');
+
+  const body = { model, prompt, size };
+  const extra = {};
+
+  if (fmt === 'url') {
+    extra.response_format = 'url';
+  } else {
+    body.return_base64 = true;
+  }
+
+  if (imgMode === 'img2img') {
+    const url = uploadsCache['single'] || document.getElementById('img-url-single').value.trim();
+    if (!url) { toast('请提供参考图片', 'err'); return; }
+    extra.image = [url];
+    if (fmt !== 'url') extra.response_format = 'b64_json';
+    delete body.return_base64;
+  }
+  if (imgMode === 'multi') {
+    const urls = getKfUrls('img');
+    if (urls.length < 2) { toast('多图合成至少需要2张图', 'err'); return; }
+    extra.image = urls;
+    extra.response_format = fmt === 'url' ? 'url' : 'b64_json';
+    delete body.return_base64;
+  }
+
+  if (Object.keys(extra).length) body.extra_body = extra;
+
+  setBusy(true);
+  const card = addPendingCard('image', model, prompt);
+  try {
+    const res = await fetch(`${API_BASE}/v1/images/generations`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error?.message || `HTTP ${res.status}`);
+
+    const item = data.data?.[0];
+    if (!item) throw new Error('返回数据为空');
+
+    let imgSrc;
+    if (item.url) imgSrc = item.url;
+    else if (item.b64_json) imgSrc = `data:image/png;base64,${item.b64_json}`;
+    else throw new Error('无图片数据');
+
+    completeImageCard(card, imgSrc, { model, size, prompt });
+    addToHistory(imgSrc, 'image');
+    setStatus('ok');
+    toast('图片生成完成 ✦', 'ok');
+  } catch(e) {
+    failCard(card, e.message);
+    setStatus('err');
+    toast('生成失败：' + e.message, 'err');
+  } finally { setBusy(false); }
+}
+
+/* ── Video generation ── */
+async function generateVideo(key) {
+  const prompt = document.getElementById('vid-prompt').value.trim();
+  if (!prompt) { toast('请输入提示词', 'err'); return; }
+
+  const model   = document.getElementById('vid-model').value;
+  const vidMode = getActiveVal('vid-mode-group');
+  const [width, height] = document.getElementById('vid-resolution').value.split('x').map(Number);
+  const numFrames = parseInt(document.getElementById('vid-duration').value);
+  const fps = parseInt(document.getElementById('vid-fps').value);
+  const steps = document.getElementById('vid-steps').value;
+  const seed  = document.getElementById('vid-seed').value;
+  const neg   = document.getElementById('vid-neg-prompt').value.trim();
+
+  const body = { model, prompt, width, height, num_frames: numFrames, frame_rate: fps };
+  if (neg) body.negative_prompt = neg;
+  if (steps) body.num_inference_steps = parseInt(steps);
+  if (seed)  body.seed = parseInt(seed);
+
+  if (vidMode === 'i2v') {
+    const url = uploadsCache['vid'] || document.getElementById('vid-img-url').value.trim();
+    if (!url) { toast('请提供参考图片', 'err'); return; }
+    body.image = url;
+  }
+  if (vidMode === 'keyframe') {
+    const urls = getKfUrls('vid');
+    if (urls.length < 2) { toast('关键帧动画至少需要2张图', 'err'); return; }
+    body.extra_body = { image: urls, mode: 'keyframes' };
+  }
+
+  setBusy(true);
+  const card = addPendingCard('video', model, prompt);
+
+  try {
+    // Create task
+    const res = await fetch(`${API_BASE}/v1/videos`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const task = await res.json();
+    if (!res.ok) throw new Error(task.error?.message || `HTTP ${res.status}`);
+
+    const videoId = task.video_id || task.id;
+    if (!videoId) throw new Error('未获取到 video_id');
+
+    updatePendingCard(card, '任务已创建，等待处理…', 0);
+
+    // Poll
+    const videoUrl = await pollVideo(key, videoId, card);
+    completeVideoCard(card, videoUrl, { model, frames: numFrames, fps });
+    addToHistory(videoUrl, 'video');
+    setStatus('ok');
+    toast('视频生成完成 ✦', 'ok');
+  } catch(e) {
+    failCard(card, e.message);
+    setStatus('err');
+    toast('生成失败：' + e.message, 'err');
+  } finally { setBusy(false); }
+}
+
+async function pollVideo(key, videoId, card, maxWait = 600000) {
+  const start = Date.now();
+  const interval = 4000;
+  let attempt = 0;
+
+  while (Date.now() - start < maxWait) {
+    await sleep(interval);
+    attempt++;
+
+    const res = await fetch(`${API_BASE}/agnesapi?video_id=${videoId}`, {
+      headers: { 'Authorization': `Bearer ${key}` }
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error?.message || `HTTP ${res.status}`);
+
+    const status = data.status;
+    const progress = data.progress || 0;
+
+    if (status === 'completed') {
+      if (!data.url) throw new Error('任务完成但无视频 URL');
+      return data.url;
+    }
+    if (status === 'failed') throw new Error(data.error?.message || '视频生成失败');
+
+    const label = status === 'in_progress' ? `生成中 (${progress}%)` : '队列等待中…';
+    updatePendingCard(card, label, progress);
+  }
+  throw new Error('生成超时，请稍后重试');
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+/* ════════════════════════════════════════════
+   UI Cards
+══════════════════════════════════════════════ */
+function hideEmpty() {
+  document.getElementById('empty-state').style.display = 'none';
+}
+
+let cardId = 0;
+function addPendingCard(type, model, prompt) {
+  hideEmpty();
+  const id = ++cardId;
+  const body = document.getElementById('canvas-body');
+  const el = document.createElement('div');
+  el.className = 'result-card'; el.id = `card-${id}`;
+  const badge = type === 'image'
+    ? `<span class="result-badge badge-img">图片</span>`
+    : `<span class="result-badge badge-vid">视频</span>`;
+  el.innerHTML = `
+    <div class="result-card-header">
+      ${badge}
+      <div class="result-meta">${model} · ${truncate(prompt, 40)}</div>
+    </div>
+    <div class="progress-wrap" id="progress-${id}">
+      <div class="progress-label">
+        <span id="prog-label-${id}">准备中…</span>
+        <span style="display:flex;gap:6px;align-items:center">
+          <div class="progress-dot"></div>
+          <span id="prog-pct-${id}">0%</span>
+        </span>
+      </div>
+      <div class="progress-bar-bg"><div class="progress-bar-fill" id="prog-bar-${id}" style="width:0%"></div></div>
+    </div>
+  `;
+  body.prepend(el);
+  return id;
+}
+
+function updatePendingCard(id, label, pct) {
+  const lbl = document.getElementById(`prog-label-${id}`);
+  const bar = document.getElementById(`prog-bar-${id}`);
+  const p   = document.getElementById(`prog-pct-${id}`);
+  if (lbl) lbl.textContent = label;
+  if (bar) bar.style.width = pct + '%';
+  if (p)   p.textContent   = pct + '%';
+}
+
+function completeImageCard(id, src, meta) {
+  const pw = document.getElementById(`progress-${id}`);
+  if (pw) pw.remove();
+  const card = document.getElementById(`card-${id}`);
+  const div = document.createElement('div');
+  div.innerHTML = `
+    <div style="position:relative">
+      <img class="result-img" src="${src}" alt="Generated image" loading="lazy">
+      <div style="position:absolute;top:8px;right:8px;display:flex;gap:6px">
+        <a href="${src}" download="agnes-${id}.png" target="_blank">
+          <button class="icon-btn" title="下载">⬇</button>
+        </a>
+        <button class="icon-btn" title="复制URL" onclick="copyText('${src}')">📋</button>
+      </div>
+    </div>
+    <div style="padding:10px 14px;font-size:.75rem;color:var(--muted)">${meta.size} · ${truncate(meta.prompt,60)}</div>
+  `;
+  card.appendChild(div);
+}
+
+function completeVideoCard(id, url, meta) {
+  const pw = document.getElementById(`progress-${id}`);
+  if (pw) pw.remove();
+  const card = document.getElementById(`card-${id}`);
+  const div = document.createElement('div');
+  div.innerHTML = `
+    <video class="result-video" controls autoplay muted loop>
+      <source src="${url}" type="video/mp4">
+    </video>
+    <div style="padding:10px 14px;display:flex;align-items:center;justify-content:space-between">
+      <span style="font-size:.75rem;color:var(--muted)">${meta.frames}帧 @ ${meta.fps}fps · ${meta.model}</span>
+      <div style="display:flex;gap:6px">
+        <a href="${url}" download="agnes-vid-${id}.mp4" target="_blank">
+          <button class="icon-btn" title="下载">⬇</button>
+        </a>
+        <button class="icon-btn" title="复制URL" onclick="copyText('${url}')">📋</button>
+      </div>
+    </div>
+  `;
+  card.appendChild(div);
+}
+
+function failCard(id, msg) {
+  const pw = document.getElementById(`progress-${id}`);
+  if (pw) pw.innerHTML = `<div style="padding:16px 20px;color:var(--red);font-size:.82rem">✗ 生成失败：${msg}</div>`;
+}
+
+/* ════════════════════════════════════════════
+   History strip
+══════════════════════════════════════════════ */
+function addToHistory(src, type) {
+  const strip = document.getElementById('history-strip');
+  document.getElementById('hist-empty').style.display = 'none';
+  const img = document.createElement(type === 'video' ? 'video' : 'img');
+  img.className = 'hist-thumb';
+  img.src = src;
+  if (type === 'video') { img.muted = true; img.loop = true; img.autoplay = true; }
+  img.title = type === 'image' ? '点击预览' : '视频';
+  if (type === 'image') img.onclick = () => window.open(src, '_blank');
+  strip.appendChild(img);
+}
+
+/* ════════════════════════════════════════════
+   Utils
+══════════════════════════════════════════════ */
+function setBusy(v) {
+  const btn = document.getElementById('gen-btn');
+  const txt = document.getElementById('gen-btn-text');
+  btn.disabled = v;
+  btn.classList.toggle('loading', v);
+  txt.textContent = v ? '⟳ 生成中…' : '✦ 开始生成';
+  setStatus(v ? 'busy' : (getKey() ? 'ok' : ''));
+}
+
+let toastTimer;
+function toast(msg, type='') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `show ${type}`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.className = '', 3200);
+}
+
+function truncate(str, n) { return str.length > n ? str.slice(0, n) + '…' : str; }
+
+function copyText(text) {
+  navigator.clipboard.writeText(text).then(() => toast('已复制 ✓', 'ok'));
+}
+
+function clearCanvas() {
+  const body = document.getElementById('canvas-body');
+  body.innerHTML = `<div class="empty-state" id="empty-state">
+    <div class="empty-icon">✦</div>
+    <div class="empty-title">画布空空如也</div>
+    <div class="empty-sub">填写提示词并点击「开始生成」，图片或视频将在这里呈现。</div>
+  </div>`;
+  results = [];
+  document.getElementById('history-strip').innerHTML = `<span class="hist-empty" id="hist-empty">暂无历史</span>`;
+}
+
+function downloadAll() {
+  toast('请使用各卡片的下载按钮保存文件', '');
+}
+
+/* ── Drag & drop ── */
+document.querySelectorAll('.upload-zone').forEach(zone => {
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault(); zone.classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (!file || !file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const slot = zone.id?.includes('single') ? 'single' : 'vid';
+      uploadsCache[slot] = ev.target.result;
+      const preview = zone.querySelector('.upload-preview');
+      if (preview) { preview.src = ev.target.result; preview.style.display = 'block'; }
+    };
+    reader.readAsDataURL(file);
+  });
+});
+</script>
+<div class="return-home">
+  <a href="../index.html">← 返回主页</a>
+</div>
+</body>
+</html>

@@ -3,15 +3,30 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>在线时钟</title>
+  <title>工具集</title>
   <style>
     :root {
-      --bg1: #f0f9ff;
-      --bg2: #e0f2fe;
-      --accent: #38bdf8;
-      --accent2: #60a5fa;
-      --text: #0f172a;
-      --muted: #475569;
+      --bg-top: #eaf6ff;
+      --bg-bottom: #ffeaf2;
+      --bg: #f4f7ff;
+      --surface: rgba(255, 255, 255, 0.86);
+      --text: #101828;
+      --muted: #5f6b80;
+      --blue: #4f7cff;
+      --indigo: #6e5bff;
+      --cyan: #2ec7ff;
+      --pink: #ff5fa2;
+      --orange: #ff8b3d;
+      --green: #2fcf79;
+      --border: rgba(255, 255, 255, 0.6);
+      --shadow: 0 24px 70px rgba(15, 23, 42, 0.13);
+    }
+
+    body.theme-pink {
+      --bg-top: #fff2f7;
+      --bg-bottom: #eaf6ff;
+      --blue: #ff6f91;
+      --indigo: #3f7cff;
     }
 
     * { box-sizing: border-box; }
@@ -19,161 +34,365 @@
     body {
       margin: 0;
       min-height: 100vh;
-      display: grid;
-      place-items: center;
-      font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+      font-family: "Source Han Serif SC", "Noto Serif SC", "Songti SC", "SimSun", serif;
       color: var(--text);
       background:
-        radial-gradient(circle at top left, rgba(56,189,248,0.24), transparent 28%),
-        radial-gradient(circle at bottom right, rgba(96,165,250,0.22), transparent 34%),
-        linear-gradient(135deg, var(--bg1), var(--bg2));
-      overflow: hidden;
+        radial-gradient(circle at top left, rgba(79, 124, 255, 0.18), transparent 28%),
+        radial-gradient(circle at bottom right, rgba(255, 95, 162, 0.14), transparent 30%),
+        linear-gradient(135deg, #f7f9ff, #eef6ff);
+      padding: 24px;
     }
 
     body::before,
     body::after {
       content: "";
-      position: absolute;
-      inset: auto;
-      width: 320px;
-      height: 320px;
+      position: fixed;
+      width: 340px;
+      height: 340px;
       border-radius: 50%;
-      filter: blur(60px);
-      opacity: 0.45;
-      animation: float 8s ease-in-out infinite;
+      filter: blur(70px);
+      opacity: 0.4;
       pointer-events: none;
+      z-index: 0;
     }
 
     body::before {
-      background: rgba(56, 189, 248, 0.22);
-      top: -80px;
-      left: -40px;
+      background: rgba(79, 124, 255, 0.2);
+      top: -100px;
+      left: -60px;
     }
 
     body::after {
-      background: rgba(96, 165, 250, 0.2);
-      bottom: -60px;
-      right: -30px;
-      animation-delay: -3s;
+      background: rgba(46, 199, 255, 0.2);
+      right: -90px;
+      bottom: -80px;
     }
 
-    .clock-card {
+    .topbar {
       position: relative;
-      width: min(92vw, 620px);
-      padding: 36px;
-      border-radius: 28px;
-      background: rgba(255, 255, 255, 0.72);
-      border: 1px solid rgba(56, 189, 248, 0.16);
-      box-shadow: 0 20px 60px rgba(14, 116, 144, 0.16);
-      backdrop-filter: blur(18px);
-      -webkit-backdrop-filter: blur(18px);
-      text-align: center;
+      z-index: 1;
+      max-width: 1240px;
+      margin: 0 auto 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .theme-switch { display: flex; gap: 8px; }
+    .theme-switch button, .topbar a {
+      border: none;
+      cursor: pointer;
+      font: inherit;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.8);
+      color: var(--text);
+      border: 1px solid rgba(15, 23, 42, 0.08);
+      text-decoration: none;
+    }
+    .theme-switch button.active {
+      background: var(--blue);
+      color: white;
+    }
+
+    .shell {
+      position: relative;
+      z-index: 1;
+      max-width: 1240px;
+      margin: 0 auto;
+    }
+
+    .hero {
+      position: relative;
+      background: linear-gradient(135deg, rgba(255,255,255,0.95), rgba(242,247,255,0.8));
+      border: 1px solid var(--border);
+      border-radius: 32px;
+      box-shadow: var(--shadow);
+      padding: 30px;
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 24px;
+      backdrop-filter: blur(16px);
       overflow: hidden;
     }
 
-    .clock-card::before {
+    .hero::after {
       content: "";
       position: absolute;
-      inset: 0;
-      background: linear-gradient(120deg, rgba(255,255,255,0.7), transparent 45%, rgba(56,189,248,0.08));
+      inset: -30px auto auto -30px;
+      width: 180px;
+      height: 180px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(79, 124, 255, 0.15), transparent 70%);
       pointer-events: none;
     }
 
-    .label {
-      display: inline-block;
-      padding: 6px 14px;
-      border-radius: 999px;
-      font-size: 13px;
-      letter-spacing: 1.2px;
-      text-transform: uppercase;
-      color: #0369a1;
-      background: rgba(56, 189, 248, 0.12);
-      border: 1px solid rgba(56, 189, 248, 0.2);
-      margin-bottom: 18px;
+    .hero-copy {
+      position: relative;
+      z-index: 1;
     }
 
-    .time {
-      font-size: clamp(3rem, 7vw, 5.8rem);
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      margin: 8px 0 10px;
-      text-shadow: 0 0 24px rgba(56, 189, 248, 0.28);
-    }
-
-    .date {
-      font-size: 1.05rem;
-      color: var(--muted);
-      margin-bottom: 20px;
-    }
-
-    .status {
+    .pill {
       display: inline-flex;
       align-items: center;
       gap: 8px;
+      padding: 8px 12px;
       border-radius: 999px;
-      padding: 9px 14px;
-      background: rgba(224, 242, 254, 0.8);
-      color: #334155;
+      background: rgba(79, 124, 255, 0.1);
+      border: 1px solid rgba(79, 124, 255, 0.16);
+      color: var(--blue);
+      font-size: 0.9rem;
+      font-weight: 600;
+      margin-bottom: 14px;
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: clamp(1.9rem, 3vw, 2.7rem);
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+    }
+
+    .hero p {
+      margin: 0;
+      font-size: 1rem;
+      line-height: 1.7;
+      color: var(--muted);
+      max-width: 620px;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 20px;
+    }
+
+    .hero-actions a {
+      text-decoration: none;
+      padding: 11px 16px;
+      border-radius: 999px;
+      font-weight: 600;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .hero-actions a:hover {
+      transform: translateY(-2px);
+    }
+
+    .primary {
+      color: white;
+      background: linear-gradient(135deg, var(--blue), var(--indigo));
+      box-shadow: 0 10px 28px rgba(79, 124, 255, 0.24);
+    }
+
+    .secondary {
+      color: var(--text);
+      background: rgba(255,255,255,0.7);
+      border: 1px solid rgba(15, 23, 42, 0.08);
+    }
+
+    .hero-panel {
+      background: linear-gradient(135deg, #111827, #243449);
+      border-radius: 24px;
+      padding: 20px;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 16px;
+      min-height: 240px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+    }
+
+    .panel-chip {
+      display: inline-flex;
+      width: fit-content;
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.12);
+      font-size: 0.82rem;
+      color: #dbeafe;
+    }
+
+    .panel-list {
+      display: grid;
+      gap: 10px;
       font-size: 0.95rem;
+      color: #e2e8f0;
     }
 
-    .dot {
-      width: 10px;
-      height: 10px;
+    .panel-list span {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 10px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .section-title {
+      margin: 26px 0 12px;
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #273449;
+    }
+
+    .page-title {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .page-title h2 {
+      margin: 0;
+      font-size: 1.05rem;
+      letter-spacing: -0.02em;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 18px;
+    }
+
+    .tool-card {
+      display: block;
+      position: relative;
+      text-decoration: none;
+      color: inherit;
+      padding: 18px 22px;
+      border-radius: 24px;
+      background: var(--surface);
+      border: 1px solid rgba(255, 255, 255, 0.8);
+      box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      overflow: hidden;
+      min-height: auto;
+    }
+
+    .tool-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 20px 44px rgba(15, 23, 42, 0.12);
+    }
+
+    .tool-card .icon {
+      font-size: 1.8rem;
+      margin-bottom: 14px;
+      width: 48px;
+      height: 48px;
+      display: grid;
+      place-items: center;
+      border-radius: 16px;
+      color: white;
+    }
+
+    .tool-card h3 {
+      margin: 0 0 8px;
+      font-size: 1.06rem;
+    }
+
+    .tool-card p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.6;
+      font-size: 0.94rem;
+    }
+
+    .tool-card .tag {
+      display: inline-flex;
+      margin-top: 12px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      background: rgba(15, 23, 42, 0.06);
+      color: #475569;
+    }
+
+    .tool-card::after {
+      content: "";
+      position: absolute;
+      inset: auto -30px -30px auto;
+      width: 120px;
+      height: 120px;
       border-radius: 50%;
-      background: #22c55e;
-      box-shadow: 0 0 10px #22c55e;
-      animation: pulse 1.4s infinite;
+      background: radial-gradient(circle, rgba(255,255,255,0.45), transparent 70%);
+      pointer-events: none;
     }
 
-    @keyframes pulse {
-      0%, 100% { transform: scale(1); opacity: 1; }
-      50% { transform: scale(1.2); opacity: 0.8; }
+    .card-ai .icon { background: linear-gradient(135deg, var(--blue), var(--cyan)); }
+    .card-color .icon { background: linear-gradient(135deg, var(--orange), var(--pink)); }
+    .card-text .icon { background: linear-gradient(135deg, var(--green), var(--cyan)); }
+    .card-notes .icon { background: linear-gradient(135deg, var(--pink), var(--indigo)); }
+
+    @media (max-width: 960px) {
+      .hero { grid-template-columns: 1fr; }
+      .grid { grid-template-columns: repeat(2, 1fr); }
     }
 
-    @keyframes float {
-      0%, 100% { transform: translateY(0px) translateX(0px); }
-      50% { transform: translateY(-20px) translateX(12px); }
+    @media (max-width: 640px) {
+      body { padding: 14px; }
+      .hero { padding: 20px; border-radius: 24px; }
+      .grid { grid-template-columns: 1fr; }
+      .tool-card { min-height: auto; }
     }
   </style>
 </head>
 <body>
-  <div class="clock-card">
-    <div class="label">当前时间</div>
-    <div id="time" class="time">--:--:--</div>
-    <div id="date" class="date">--</div>
-    <div class="status">
-      <span class="dot"></span>
-      <span id="statusText">实时同步中</span>
+  <div class="topbar">
+    <div class="page-title">
+      <div class="pill">✨ 轻量工具集</div>
+      <h2>选择工具，马上开始</h2>
+    </div>
+    <div class="theme-switch" role="toolbar" aria-label="主题切换">
+      <button class="active" data-theme="sky" onclick="setTheme('sky')">天蓝</button>
+      <button data-theme="pink" onclick="setTheme('pink')">浅粉</button>
     </div>
   </div>
 
+  <div class="shell">
+    <div class="grid">
+      <a class="tool-card card-ai" href="tools/ai.html">
+        <h3>AI 创作台</h3>
+        <p>适合生成图片与视频。</p>
+        <div class="tag">智能创作</div>
+      </a>
+
+      <a class="tool-card card-color" href="tools/color.html">
+        <h3>调色灵感</h3>
+        <p>快速生成一组适合 UI、海报和品牌的配色。</p>
+        <div class="tag">视觉设计</div>
+      </a>
+
+      <a class="tool-card card-text" href="tools/text.html">
+        <h3>文本助手</h3>
+        <p>帮你检查字数、段落和内容长度，适合写作与整理。</p>
+        <div class="tag">内容处理</div>
+      </a>
+
+      <a class="tool-card card-notes" href="tools/notes.html">
+        <h3>便签清单</h3>
+        <p>随手记录待办与灵感，页面刷新后仍可保留。</p>
+        <div class="tag">效率管理</div>
+      </a>
+      
+        <a class="tool-card card-timer" href="tools/timer.html">
+          <h3>计时器</h3>
+          <p>专注计时、倒计时与秒表功能。</p>
+          <div class="tag">时间管理</div>
+        </a>
+    </div>
+  </div>
   <script>
-    function updateClock() {
-      const now = new Date();
-      const timeEl = document.getElementById('time');
-      const dateEl = document.getElementById('date');
-      const statusEl = document.getElementById('statusText');
-
-      const h = String(now.getHours()).padStart(2, '0');
-      const m = String(now.getMinutes()).padStart(2, '0');
-      const s = String(now.getSeconds()).padStart(2, '0');
-
-      timeEl.textContent = `${h}:${m}:${s}`;
-
-      const date = now.toLocaleDateString('zh-CN', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        weekday: 'long'
-      });
-      dateEl.textContent = date;
-
-      statusEl.textContent = `已同步 ${h}:${m}`;
+    function setTheme(theme) {
+      document.body.classList.toggle('theme-pink', theme === 'pink');
+      document.querySelectorAll('.theme-switch button').forEach(btn => btn.classList.toggle('active', btn.dataset.theme === theme));
+      localStorage.setItem('site-theme', theme);
     }
-
-    updateClock();
-    setInterval(updateClock, 1000);
+    const savedTheme = localStorage.getItem('site-theme') || 'sky';
+    setTheme(savedTheme);
   </script>
 </body>
 </html>

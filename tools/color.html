@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>调色灵感</title>
+  <style>
+    :root {
+      --bg-top: #eaf6ff;
+      --bg-bottom: #ffeaf2;
+      --card: rgba(255,255,255,0.94);
+      --text: #233244;
+      --muted: #5f6d7d;
+      --accent: #3f7cff;
+      --border: #dceaf7;
+      --shadow: 0 20px 55px rgba(35, 58, 92, 0.12);
+    }
+    body.theme-pink {
+      --bg-top: #fff2f7;
+      --bg-bottom: #eaf6ff;
+      --accent: #ff6f91;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; padding: 24px; font-family: "Source Han Serif SC", "Noto Serif SC", "Songti SC", "SimSun", serif;
+      background: linear-gradient(135deg, var(--bg-top), var(--bg-bottom)); color: var(--text);
+    }
+    .topbar { max-width: 1080px; margin: 0 auto 16px; display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .theme-switch button, .topbar a, .swatch { border: none; cursor: pointer; font: inherit; }
+    .theme-switch button { padding: 8px 12px; border-radius: 999px; background: rgba(255,255,255,0.82); color: var(--text); border: 1px solid var(--border); }
+    .theme-switch button.active { background: var(--accent); color: white; }
+    .topbar a { text-decoration: none; color: var(--accent); padding: 8px 12px; border-radius: 999px; background: rgba(255,255,255,0.82); border: 1px solid var(--border); }
+    .card { max-width: 1080px; margin: 0 auto; background: var(--card); border: 1px solid var(--border); border-radius: 28px; padding: 24px; box-shadow: var(--shadow); }
+    h1 { margin: 0 0 6px; font-size: 1.5rem; }
+    p { margin: 0 0 16px; color: var(--muted); }
+    .palette { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+    .swatch { width: 100%; min-height: 100px; border-radius: 18px; padding: 10px; color: white; display: flex; flex-direction: column; justify-content: flex-end; box-shadow: inset 0 -40px 60px rgba(0,0,0,0.16); text-align: left; }
+    .swatch small { opacity: 0.95; font-size: 0.76rem; }
+    .swatch strong { font-size: 0.95rem; }
+    .group { margin-top: 16px; }
+    .group-title { color: var(--muted); font-size: 0.95rem; font-weight: 600; margin-bottom: 10px; }
+    .footer { margin-top: 16px; color: var(--muted); display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .footer a { color: var(--accent); text-decoration: none; font-weight: 600; }
+    .status { margin-top: 12px; color: var(--accent); font-weight: 600; }
+    @media (max-width: 780px) { .palette { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="theme-switch" role="toolbar" aria-label="主题切换">
+      <button class="active" data-theme="sky" onclick="setTheme('sky')">天蓝</button>
+      <button data-theme="pink" onclick="setTheme('pink')">浅粉</button>
+    </div>
+    <a href="../index.html">返回首页</a>
+  </div>
+
+  <div class="card">
+    <h1>调色灵感</h1>
+    <p>内置常用笔记色与标准色，点击即可复制十六进制与 RGB。</p>
+    <div class="group">
+      <div class="group-title">常用笔记色</div>
+      <div class="palette" id="moleskine"></div>
+    </div>
+    <div class="group">
+      <div class="group-title">标准色</div>
+      <div class="palette" id="standard"></div>
+    </div>
+    <div id="status" class="status">点击颜色块即可复制。</div>
+    <div class="footer">
+      <span>适合 UI、海报、笔记本与品牌视觉。</span>
+      <a href="../index.html">返回首页</a>
+    </div>
+  </div>
+
+  <script>
+    const moleskineColors = [
+      { name: '道奇蓝', hex: '#1E90FF', rgb: '30, 144, 255' },
+      { name: '深天蓝', hex: '#00BFFF', rgb: '0, 191, 255' },
+      { name: '皇家蓝', hex: '#4169E1', rgb: '65, 105, 225' },
+      { name: '钴蓝', hex: '#0047AB', rgb: '0, 71, 171' },
+      { name: '宝石蓝', hex: '#0A84FF', rgb: '10, 132, 255' },
+      { name: '翠绿', hex: '#2ECC71', rgb: '46, 204, 113' },
+      { name: '翡翠', hex: '#10B981', rgb: '16, 185, 129' },
+      { name: '薄荷绿', hex: '#98FB98', rgb: '152, 251, 152' },
+      { name: '墨绿', hex: '#0B8457', rgb: '11, 132, 87' },
+      { name: '柠檬黄', hex: '#FFEB3B', rgb: '255, 235, 59' },
+      { name: '向日黄', hex: '#FFC107', rgb: '255, 193, 7' },
+      { name: '琥珀', hex: '#FFBF00', rgb: '255, 191, 0' },
+      { name: '橙红', hex: '#FF6B35', rgb: '255, 107, 53' },
+      { name: '珊瑚', hex: '#FF6B6B', rgb: '255, 107, 107' },
+      { name: '胭脂红', hex: '#DC143C', rgb: '220, 20, 60' },
+      { name: '玫瑰粉', hex: '#FF69B4', rgb: '255, 105, 180' },
+      { name: '洋红', hex: '#FF00FF', rgb: '255, 0, 255' },
+      { name: '紫丁香', hex: '#B57EDC', rgb: '181, 126, 220' },
+      { name: '茄子紫', hex: '#6A5ACD', rgb: '106, 90, 205' },
+      { name: '靛蓝', hex: '#4B0082', rgb: '75, 0, 130' },
+      { name: '石板灰', hex: '#708090', rgb: '112, 128, 144' },
+      { name: '橄榄', hex: '#808000', rgb: '128, 128, 0' },
+      { name: '棕褐', hex: '#8B4513', rgb: '139, 69, 19' },
+      { name: '奶油', hex: '#FFF4E6', rgb: '255, 244, 230' },
+      { name: '便签黄', hex: '#FFEB3B', rgb: '255, 235, 59' },
+      { name: '便签橙', hex: '#FFB74D', rgb: '255, 183, 77' },
+      { name: '便签绿', hex: '#C8E6C9', rgb: '200, 230, 201' },
+      { name: '便签薄荷', hex: '#B2F5EA', rgb: '178, 245, 234' },
+      { name: '便签粉', hex: '#F8BBD0', rgb: '248, 187, 208' },
+      { name: '便签薰衣', hex: '#E1BEE7', rgb: '225, 190, 231' },
+      { name: '便签灰', hex: '#CFD8DC', rgb: '207, 216, 220' }
+    ];
+
+    const standardColors = [
+      { name: '标准红', hex: '#FF3B30', rgb: '255, 59, 48' },
+      { name: '标准橙', hex: '#FF9500', rgb: '255, 149, 0' },
+      { name: '标准黄', hex: '#FFCC00', rgb: '255, 204, 0' },
+      { name: '标准绿', hex: '#34C759', rgb: '52, 199, 89' },
+      { name: '标准蓝', hex: '#007AFF', rgb: '0, 122, 255' },
+      { name: '标准紫', hex: '#5856D6', rgb: '88, 86, 214' },
+      { name: '标准黑', hex: '#1F1F1F', rgb: '31, 31, 31' },
+      { name: '标准白', hex: '#FFFFFF', rgb: '255, 255, 255' }
+    ];
+
+    function setTheme(theme) {
+      document.body.classList.toggle('theme-pink', theme === 'pink');
+      document.querySelectorAll('.theme-switch button').forEach(btn => btn.classList.toggle('active', btn.dataset.theme === theme));
+    }
+
+    function renderColors(containerId, colors) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = colors.map(color => `
+        <button class="swatch" style="background:${color.hex};" onclick="copyColor('${color.hex}', '${color.rgb}', '${color.name}')">
+          <strong>${color.name}</strong>
+          <small>${color.hex}</small>
+          <small>RGB ${color.rgb}</small>
+        </button>
+      `).join('');
+    }
+
+    async function copyColor(hex, rgb, name) {
+      const text = `${name}\nHex: ${hex}\nRGB: ${rgb}`;
+      try {
+        await navigator.clipboard.writeText(`${hex} / ${rgb}`);
+        document.getElementById('status').textContent = `${name} 已复制：${hex} · ${rgb}`;
+      } catch (error) {
+        document.getElementById('status').textContent = '复制失败，请手动复制。';
+      }
+    }
+
+    renderColors('moleskine', moleskineColors);
+    renderColors('dodger', dodgerColors);
+    renderColors('standard', standardColors);
+  </script>
+</body>
+</html>
