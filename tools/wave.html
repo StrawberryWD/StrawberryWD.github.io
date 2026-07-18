@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>机械波交互实验室</title>
+    <!-- 引入 Tailwind CSS 进行极速现代 UI 构建 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 定制滑动条样式，使其更符合现代互联网质感 */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px; width: 16px;
+            border-radius: 50%;
+            background: #4f46e5;
+            cursor: pointer;
+            margin-top: -6px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 4px;
+            cursor: pointer;
+            background: #e2e8f0;
+            border-radius: 2px;
+        }
+        input[type=range]:focus { outline: none; }
+        
+        /* 画布鼠标样式 */
+        .canvas-container { cursor: crosshair; }
+        .grabbing { cursor: grabbing !important; }
+    </style>
+</head>
+<body class="flex h-screen w-screen bg-slate-50 text-slate-800 font-sans overflow-hidden selection:bg-indigo-100">
+    <a href="../index.html" style="position:fixed;top:14px;left:14px;z-index:999;background:rgba(255,255,255,0.95);padding:6px 10px;border-radius:8px;border:1px solid rgba(0,0,0,0.06);text-decoration:none;color:#111;font-size:14px">返回首页</a>
+
+    <!-- 左侧控制面板 -->
+    <aside class="w-[360px] bg-white border-r border-slate-200 shadow-xl flex flex-col z-10 overflow-y-auto shrink-0">
+        <div class="p-5 border-b border-slate-100">
+            <h1 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+                <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                机械波交互实验室
+            </h1>
+            <p class="text-xs text-slate-500 mt-1 font-mono">v = f · λ = λ / T</p>
+        </div>
+
+        <div class="p-5 flex flex-col gap-6 flex-1">
+            
+            <!-- 播放控制台 -->
+            <div class="bg-indigo-50/50 rounded-xl p-4 border border-indigo-100 flex flex-col gap-3">
+                <div class="flex justify-between items-center">
+                    <span class="text-sm font-semibold text-indigo-900">演播控制</span>
+                    <span id="timeDisplay" class="text-xs font-mono text-indigo-600 bg-white px-2 py-1 rounded shadow-sm">t = 0.00 s</span>
+                </div>
+                <div class="flex gap-2">
+                    <button id="btnPlay" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg text-sm font-medium transition-colors shadow-sm">
+                        暂停 (Pause)
+                    </button>
+                    <button id="btnStep" class="flex-1 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm">
+                        单步进 (Step)
+                    </button>
+                </div>
+                <button id="btnReset" class="w-full text-xs text-slate-500 hover:text-indigo-600 transition-colors mt-1">
+                    ↺ 重置波源状态
+                </button>
+            </div>
+
+            <!-- 显示模式切换 -->
+            <div class="flex flex-col gap-3">
+                <label class="text-sm font-semibold text-slate-700">波的类型</label>
+                <div class="flex bg-slate-100 p-1 rounded-lg">
+                    <button id="modeTransverse" class="flex-1 py-1.5 text-sm rounded-md bg-white shadow-sm font-medium text-indigo-600 transition-all">横波</button>
+                    <button id="modeLongitudinal" class="flex-1 py-1.5 text-sm rounded-md text-slate-600 hover:text-slate-900 transition-all">纵波</button>
+                </div>
+                
+                <label class="text-sm font-semibold text-slate-700 mt-2">表现形式</label>
+                <div class="flex bg-slate-100 p-1 rounded-lg">
+                    <button id="drawLine" class="flex-1 py-1.5 text-sm rounded-md text-slate-600 hover:text-slate-900 transition-all">连续线条</button>
+                    <button id="drawParticle" class="flex-1 py-1.5 text-sm rounded-md text-slate-600 hover:text-slate-900 transition-all">离散质点</button>
+                    <button id="drawBoth" class="flex-1 py-1.5 text-sm rounded-md bg-white shadow-sm font-medium text-indigo-600 transition-all">混合模式</button>
+                </div>
+            </div>
+
+            <hr class="border-slate-100">
+
+            <!-- 核心物理参数 -->
+            <div class="flex flex-col gap-4">
+                <!-- 振幅 -->
+                <div class="flex flex-col gap-1">
+                    <div class="flex justify-between items-center text-sm">
+                        <label class="font-semibold text-slate-700">振幅 (A)</label>
+                        <span id="valA" class="font-mono text-indigo-600">80 px</span>
+                    </div>
+                    <input type="range" id="inputA" min="10" max="150" value="80" step="1">
+                </div>
+
+                <!-- 频率 / 周期 -->
+                <div class="flex flex-col gap-1 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                    <div class="flex justify-between items-center text-sm">
+                        <label class="font-semibold text-slate-700">频率 (f)</label>
+                        <span id="valF" class="font-mono text-indigo-600">0.50 Hz</span>
+                    </div>
+                    <input type="range" id="inputF" min="0.1" max="2.0" value="0.5" step="0.05">
+                    
+                    <div class="flex justify-between items-center text-xs mt-2 text-slate-500">
+                        <label>周期 (T = 1/f)</label>
+                        <span id="valT" class="font-mono">2.00 s</span>
+                    </div>
+                </div>
+
+                <!-- 波速 / 介质 -->
+                <div class="flex flex-col gap-1 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                    <div class="flex justify-between items-center text-sm">
+                        <label class="font-semibold text-slate-700">波速 (v) - 由介质决定</label>
+                        <span id="valV" class="font-mono text-indigo-600">200 px/s</span>
+                    </div>
+                    <input type="range" id="inputV" min="50" max="500" value="200" step="10">
+                    <div class="flex justify-between mt-1">
+                        <button class="preset-v text-[10px] bg-slate-200 px-2 py-0.5 rounded text-slate-600 hover:bg-slate-300" data-v="100">重绳 (慢)</button>
+                        <button class="preset-v text-[10px] bg-slate-200 px-2 py-0.5 rounded text-slate-600 hover:bg-slate-300" data-v="200">标准介质</button>
+                        <button class="preset-v text-[10px] bg-slate-200 px-2 py-0.5 rounded text-slate-600 hover:bg-slate-300" data-v="400">轻绳 (快)</button>
+                    </div>
+                </div>
+
+                <!-- 波长 (因变量) -->
+                <div class="flex flex-col gap-1">
+                    <div class="flex justify-between items-center text-sm">
+                        <label class="font-semibold text-slate-700">波长 (λ = v/f)</label>
+                        <span id="valLambda" class="font-mono bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded">400 px</span>
+                    </div>
+                    <input type="range" id="inputLambda" min="25" max="1000" value="400" step="5">
+                    <p class="text-[10px] text-slate-400">注：手动调节波长会自动改变波速 v</p>
+                </div>
+            </div>
+
+            <hr class="border-slate-100">
+
+            <!-- 教学辅助开关 -->
+            <div class="flex flex-col gap-2">
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" id="toggleGrid" checked class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500">
+                    <span class="text-sm text-slate-700">显示坐标系与背景网格</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" id="toggleVectors" checked class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500">
+                    <span class="text-sm text-slate-700">显示特征质点(波源)速度/加速度矢量</span>
+                </label>
+            </div>
+            
+            <!-- 占位垫底 -->
+            <div class="h-4"></div>
+        </div>
+    </aside>
+
+    <!-- 右侧画布区 -->
+    <main class="flex-1 relative flex flex-col bg-slate-200/50 p-6">
+        <!-- 顶栏提示信息 -->
+        <div class="absolute top-10 left-10 z-10 flex gap-4 pointer-events-none">
+            <div class="bg-white/90 backdrop-blur px-4 py-2 rounded-lg shadow-sm border border-slate-200">
+                <h3 class="text-sm font-bold text-slate-800">实时波函数</h3>
+                <p id="equationDisplay" class="text-xs font-mono text-indigo-700 mt-1">y(x,t) = 80 sin[ 2π (0.50t - x/400) ]</p>
+            </div>
+            <div class="bg-white/90 backdrop-blur px-4 py-2 rounded-lg shadow-sm border border-slate-200">
+                <h3 class="text-sm font-bold text-slate-800">图例指示</h3>
+                <div class="flex items-center gap-3 text-xs mt-1 text-slate-600">
+                    <span class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-red-500"></div> 波源 (x=0)</span>
+                    <span class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-emerald-500"></div> 速度 v</span>
+                    <span class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-purple-500"></div> 加速度 a</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 标尺提示 -->
+        <div class="absolute top-10 right-10 z-10 bg-white/90 backdrop-blur px-4 py-2 rounded-lg shadow-sm border border-slate-200 pointer-events-none text-right">
+            <h3 class="text-sm font-bold text-slate-800">测量参考线</h3>
+            <p class="text-xs text-slate-500 mt-1">鼠标可直接拖拽画面中的 <span class="text-orange-500">橙色水平线</span> 与 <span class="text-cyan-500">青色垂直线</span></p>
+        </div>
+
+        <!-- 核心画布 -->
+        <div id="canvasContainer" class="canvas-container w-full h-full bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden relative">
+            <canvas id="simCanvas" class="block w-full h-full"></canvas>
+        </div>
+    </main>
+
+<script>
+/**
+ * 高中物理 - 机械波模拟核心逻辑
+ * 严格按照 y = A * sin(ωt - kx) 进行计算与绘制
+ */
+
+// --- 状态管理 (State) ---
+const state = {
+    A: 80,          // 振幅 (px)
+    f: 0.5,         // 频率 (Hz)
+    T: 2.0,         // 周期 (s)
+    v: 200,         // 波速 (px/s)
+    lambda: 400,    // 波长 (px)
+    
+    t: 0,           // 模拟时间 (s)
+    isPlaying: true,
+    
+    type: 'transverse', // 'transverse' (横波) | 'longitudinal' (纵波)
+    drawMode: 'both',   // 'line' | 'particle' | 'both'
+    
+    showGrid: true,
+    showVectors: true,
+    
+    // 参考线位置 (画布坐标系)
+    markers: {
+        h: 0, // 水平线 Y坐标 (初始化时居中)
+        v: 200 // 垂直线 X坐标
+    },
+    draggingMarker: null // 'h' 或 'v'
+};
+
+// --- DOM 元素绑定 ---
+const $ = id => document.getElementById(id);
+const inputs = {
+    A: $('inputA'), f: $('inputF'), v: $('inputV'), lambda: $('inputLambda')
+};
+const vals = {
+    A: $('valA'), f: $('valF'), T: $('valT'), v: $('valV'), lambda: $('valLambda')
+};
+const canvasContainer = $('canvasContainer');
+const canvas = $('simCanvas');
+const ctx = canvas.getContext('2d');
+
+let canvasWidth = 0;
+let canvasHeight = 0;
+let centerY = 0;
+
+// --- 响应式画布处理 (ResizeObserver 解决缩放模糊) ---
+const resizeObserver = new ResizeObserver(entries => {
+    for (let entry of entries) {
+        const { width, height } = entry.contentRect;
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = width * dpr;
+        canvas.height = height * dpr;
+        ctx.scale(dpr, dpr);
+        canvasWidth = width;
+        canvasHeight = height;
+        centerY = canvasHeight / 2;
+        
+        // 初始化水平参考线位置（波峰位置附近）
+        if(state.markers.h === 0) {
+            state.markers.h = centerY - state.A;
+        }
+    }
+});
+resizeObserver.observe(canvasContainer);
+
+// --- 物理参数联动逻辑 (v = f * λ) ---
+function updateSync(source) {
+    if (source === 'f' || source === 'v') {
+        state.lambda = state.v / state.f;
+    } else if (source === 'lambda') {
+        // 如果手动调波长，默认视作介质改变，改变波速
+        state.v = state.lambda * state.f;
+    }
+    state.T = 1 / state.f;
+    
+    // 更新滑块值
+    inputs.A.value = state.A;
+    inputs.f.value = state.f;
+    inputs.v.value = state.v;
+    inputs.lambda.value = state.lambda;
+    
+    // 更新文本显式
+    vals.A.innerText = `${Math.round(state.A)} px`;
+    vals.f.innerText = `${state.f.toFixed(2)} Hz`;
+    vals.T.innerText = `${state.T.toFixed(2)} s`;
+    vals.v.innerText = `${Math.round(state.v)} px/s`;
+    vals.lambda.innerText = `${Math.round(state.lambda)} px`;
+
+    // 更新公式
+    $('equationDisplay').innerText = `y(x,t) = ${Math.round(state.A)} sin[ 2π (${state.f.toFixed(2)}t - x/${Math.round(state.lambda)}) ]`;
+}
+
+// 绑定事件
+inputs.A.addEventListener('input', e => { state.A = parseFloat(e.target.value); updateSync('A'); });
+inputs.f.addEventListener('input', e => { state.f = parseFloat(e.target.value); updateSync('f'); });
+inputs.v.addEventListener('input', e => { state.v = parseFloat(e.target.value); updateSync('v'); });
+inputs.lambda.addEventListener('input', e => { state.lambda = parseFloat(e.target.value); updateSync('lambda'); });
+
+document.querySelectorAll('.preset-v').forEach(btn => {
+    btn.addEventListener('click', e => {
+        state.v = parseFloat(e.target.dataset.v);
+        updateSync('v');
+    });
+});
+
+// --- 控制台事件 ---
+$('btnPlay').addEventListener('click', e => {
+    state.isPlaying = !state.isPlaying;
+    e.target.innerText = state.isPlaying ? "暂停 (Pause)" : "继续 (Play)";
+    e.target.className = state.isPlaying 
+        ? "flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg text-sm font-medium transition-colors shadow-sm"
+        : "flex-1 bg-amber-500 hover:bg-amber-600 text-white py-2 rounded-lg text-sm font-medium transition-colors shadow-sm";
+});
+
+$('btnStep').addEventListener('click', () => {
+    state.isPlaying = false;
+    $('btnPlay').innerText = "继续 (Play)";
+    $('btnPlay').className = "flex-1 bg-amber-500 hover:bg-amber-600 text-white py-2 rounded-lg text-sm font-medium transition-colors shadow-sm";
+    // 单步前进 1/20 周期
+    state.t += state.T / 20; 
+});
+
+$('btnReset').addEventListener('click', () => {
+    state.t = 0;
+});
+
+// --- 模式切换事件 ---
+function updateTabs(activeId, group) {
+    group.forEach(id => {
+        if(id === activeId) {
+            $(id).className = "flex-1 py-1.5 text-sm rounded-md bg-white shadow-sm font-medium text-indigo-600 transition-all";
+        } else {
+            $(id).className = "flex-1 py-1.5 text-sm rounded-md text-slate-600 hover:text-slate-900 transition-all";
+        }
+    });
+}
+
+$('modeTransverse').addEventListener('click', () => { state.type = 'transverse'; updateTabs('modeTransverse', ['modeTransverse', 'modeLongitudinal']); });
+$('modeLongitudinal').addEventListener('click', () => { state.type = 'longitudinal'; updateTabs('modeTransverse', ['modeTransverse', 'modeLongitudinal']); });
+
+$('drawLine').addEventListener('click', () => { state.drawMode = 'line'; updateTabs('drawLine', ['drawLine', 'drawParticle', 'drawBoth']); });
+$('drawParticle').addEventListener('click', () => { state.drawMode = 'particle'; updateTabs('drawParticle', ['drawLine', 'drawParticle', 'drawBoth']); });
+$('drawBoth').addEventListener('click', () => { state.drawMode = 'both'; updateTabs('drawBoth', ['drawLine', 'drawParticle', 'drawBoth']); });
+
+$('toggleGrid').addEventListener('change', e => { state.showGrid = e.target.checked; });
+$('toggleVectors').addEventListener('change', e => { state.showVectors = e.target.checked; });
+
+// --- 标尺拖拽交互 ---
+canvasContainer.addEventListener('mousedown', e => {
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+    
+    // 检测是否点击在标尺附近 (10像素吸附范围)
+    if (Math.abs(my - state.markers.h) < 10) {
+        state.draggingMarker = 'h';
+        canvasContainer.classList.add('grabbing');
+    } else if (Math.abs(mx - state.markers.v) < 10) {
+        state.draggingMarker = 'v';
+        canvasContainer.classList.add('grabbing');
+    }
+});
+
+window.addEventListener('mousemove', e => {
+    if (!state.draggingMarker) return;
+    const rect = canvas.getBoundingClientRect();
+    if (state.draggingMarker === 'h') {
+        let y = e.clientY - rect.top;
+        state.markers.h = Math.max(0, Math.min(canvasHeight, y));
+    } else if (state.draggingMarker === 'v') {
+        let x = e.clientX - rect.left;
+        state.markers.v = Math.max(0, Math.min(canvasWidth, x));
+    }
+});
+
+window.addEventListener('mouseup', () => {
+    state.draggingMarker = null;
+    canvasContainer.classList.remove('grabbing');
+});
+
+// --- 核心渲染与物理计算引擎 ---
+let lastFrameTime = performance.now();
+
+function drawArrow(ctx, fromX, fromY, toX, toY, color) {
+    const headlen = 8; 
+    const dx = toX - fromX;
+    const dy = toY - fromY;
+    const angle = Math.atan2(dy, dx);
+    // 如果向量太小，不画
+    if (Math.sqrt(dx*dx + dy*dy) < 2) return;
+    
+    ctx.beginPath();
+    ctx.moveTo(fromX, fromY);
+    ctx.lineTo(toX, toY);
+    ctx.lineTo(toX - headlen * Math.cos(angle - Math.PI / 6), toY - headlen * Math.sin(angle - Math.PI / 6));
+    ctx.moveTo(toX, toY);
+    ctx.lineTo(toX - headlen * Math.cos(angle + Math.PI / 6), toY - headlen * Math.sin(angle + Math.PI / 6));
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+}
+
+function render() {
+    // 1. 时间步进
+    const now = performance.now();
+    const dt = (now - lastFrameTime) / 1000;
+    lastFrameTime = now;
+    
+    if (state.isPlaying) {
+        state.t += dt;
+    }
+    
+    $('timeDisplay').innerText = `t = ${state.t.toFixed(2)} s`;
+
+    // 2. 清空画布
+    ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+
+    // 3. 绘制坐标系与网格
+    if (state.showGrid) {
+        ctx.strokeStyle = '#f1f5f9';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        // 垂直网格线
+        for(let x = 0; x <= canvasWidth; x += 50) { ctx.moveTo(x, 0); ctx.lineTo(x, canvasHeight); }
+        // 水平网格线
+        for(let y = 0; y <= canvasHeight; y += 50) { ctx.moveTo(0, y); ctx.lineTo(canvasWidth, y); }
+        ctx.stroke();
+        
+        // 中心平衡位置参考线 (X轴)
+        ctx.strokeStyle = '#cbd5e1';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath();
+        ctx.moveTo(0, centerY);
+        ctx.lineTo(canvasWidth, centerY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+    }
+
+    // 计算物理常量
+    const omega = 2 * Math.PI * state.f;
+    const k = 2 * Math.PI / state.lambda;
+    // 波前位置 (模拟波由波源逐渐向外传播的过程)
+    const waveFront = state.v * state.t;
+
+    // 获取需要高亮的特定质点索引 (波源和四分之一波长处)
+    const particleSpacing = 8;
+    const numParticles = Math.floor(canvasWidth / particleSpacing);
+    const highlightIndices = [0, Math.floor((state.lambda / 4) / particleSpacing), Math.floor((state.lambda / 2) / particleSpacing)];
+
+    // 4. 绘制位移线条 (连续模型)
+    if (state.drawMode === 'line' || state.drawMode === 'both') {
+        ctx.beginPath();
+        ctx.strokeStyle = state.type === 'transverse' ? '#4f46e5' : '#94a3b8'; 
+        ctx.lineWidth = 3;
+        
+        // 若为纵波，且处于混合模式，用虚线绘制理论上的横向位移图象辅助理解
+        if(state.type === 'longitudinal') {
+            ctx.setLineDash([4, 4]);
+            ctx.strokeStyle = '#cbd5e1'; // 更浅的颜色辅助指示
+        }
+
+        for (let x = 0; x < canvasWidth; x++) {
+            let y_phys = 0;
+            // 只有波传播到的地方才有位移
+            if (x <= waveFront) {
+                // 标准方程: y = A * sin(ωt - kx)
+                y_phys = state.A * Math.sin(omega * state.t - k * x);
+            }
+            // Canvas Y轴向下，因此减去 y_phys 使正位移朝上
+            const drawY = centerY - y_phys;
+            
+            if (x === 0) ctx.moveTo(x, drawY);
+            else ctx.lineTo(x, drawY);
+        }
+        ctx.stroke();
+        ctx.setLineDash([]);
+    }
+
+    // 5. 绘制离散质点
+    if (state.drawMode === 'particle' || state.drawMode === 'both') {
+        for (let i = 0; i <= numParticles; i++) {
+            const x0 = i * particleSpacing;
+            let displacement = 0;
+            let velocity = 0;
+            let acceleration = 0;
+
+            if (x0 <= waveFront) {
+                const phase = omega * state.t - k * x0;
+                displacement = state.A * Math.sin(phase);
+                // 导数求速度与加速度
+                velocity = state.A * omega * Math.cos(phase);
+                acceleration = -state.A * omega * omega * Math.sin(phase);
+            }
+
+            let drawX = x0;
+            let drawY = centerY;
+
+            // 根据波的类型映射位移方向
+            if (state.type === 'transverse') {
+                drawY = centerY - displacement;
+            } else {
+                // 纵波质点沿传播方向(X轴)位移
+                drawX = x0 + displacement;
+            }
+
+            // 判断是否为需要特殊高亮的质点
+            const isHighlight = highlightIndices.includes(i) && x0 <= waveFront;
+            
+            ctx.beginPath();
+            ctx.arc(drawX, drawY, isHighlight ? 4 : 2.5, 0, 2 * Math.PI);
+            
+            if (isHighlight) {
+                ctx.fillStyle = i === 0 ? '#ef4444' : '#3b82f6'; // 波源红色，其他特征点蓝色
+                ctx.fill();
+                ctx.lineWidth = 1;
+                ctx.strokeStyle = '#fff';
+                ctx.stroke();
+
+                // 绘制矢量箭头
+                if (state.showVectors) {
+                    // 速度矢量映射系数 (纯视觉调整用)
+                    const vScale = 0.2;
+                    const aScale = 0.05;
+                    
+                    if (state.type === 'transverse') {
+                        // 横波速度沿 Y 轴 (注意 Canvas Y 轴反转)
+                        drawArrow(ctx, drawX, drawY, drawX, drawY - velocity * vScale, '#10b981'); 
+                        drawArrow(ctx, drawX, drawY, drawX, drawY - acceleration * aScale, '#8b5cf6');
+                    } else {
+                        // 纵波速度沿 X 轴
+                        drawArrow(ctx, drawX, drawY, drawX + velocity * vScale, drawY, '#10b981');
+                        drawArrow(ctx, drawX, drawY, drawX + acceleration * aScale, drawY, '#8b5cf6');
+                    }
+                }
+            } else {
+                ctx.fillStyle = state.type === 'transverse' ? '#6366f1' : '#475569';
+                ctx.fill();
+            }
+        }
+    }
+
+    // 6. 绘制测量参考线
+    // 水平参考线 (橙色)
+    ctx.beginPath();
+    ctx.moveTo(0, state.markers.h);
+    ctx.lineTo(canvasWidth, state.markers.h);
+    ctx.strokeStyle = 'rgba(249, 115, 22, 0.7)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    // 绘制拖拽把手
+    ctx.fillStyle = '#f97316';
+    ctx.fillRect(0, state.markers.h - 10, 40, 20);
+    ctx.fillStyle = '#fff';
+    ctx.font = '10px sans-serif';
+    ctx.fillText('拖拽', 8, state.markers.h + 3);
+    
+    // 显示距离平衡位置的高度(振幅参考)
+    ctx.fillStyle = '#f97316';
+    ctx.fillText(`Δy = ${Math.round(Math.abs(centerY - state.markers.h))} px`, 45, state.markers.h - 5);
+
+    // 垂直参考线 (青色)
+    ctx.beginPath();
+    ctx.moveTo(state.markers.v, 0);
+    ctx.lineTo(state.markers.v, canvasHeight);
+    ctx.strokeStyle = 'rgba(6, 182, 212, 0.7)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    // 绘制拖拽把手
+    ctx.fillStyle = '#06b6d4';
+    ctx.fillRect(state.markers.v - 10, 0, 20, 40);
+    
+    ctx.save();
+    ctx.translate(state.markers.v - 3, 28);
+    ctx.rotate(-Math.PI/2);
+    ctx.fillStyle = '#fff';
+    ctx.fillText('拖拽', 0, 0);
+    ctx.restore();
+
+    ctx.fillStyle = '#06b6d4';
+    ctx.fillText(`x = ${Math.round(state.markers.v)} px`, state.markers.v + 8, 20);
+
+    // 请求下一帧渲染
+    requestAnimationFrame(render);
+}
+
+// 初始化启动
+updateSync('f');
+requestAnimationFrame(render);
+
+</script>
+</body>
+</html>
